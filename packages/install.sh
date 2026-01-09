@@ -11,7 +11,7 @@ public_key_url="https://nginx.org/keys/nginx_signing.key"
 agent_conf_path="/etc/amplify-agent"
 agent_conf_file="${agent_conf_path}/agent.conf"
 amplify_hostname=""
-api_url="https://receiver.amplify.nginx.com:443"
+api_url="https://amplify.getpagespeed.com"
 api_ping_url="${api_url}/ping/"
 api_receiver_url="${api_url}/1.4"
 nginx_conf_file="/etc/nginx/nginx.conf"
@@ -394,7 +394,7 @@ done
 
 step=" 1"
 
-printf "\n --- This script will install the NGINX Amplify Agent package ---\n\n"
+printf "\n --- This script will install the GetPageSpeed Amplify Agent package ---\n\n"
 printf "\033[32m ${step}. Checking admin user ...\033[0m"
 
 sudo_found="no"
@@ -765,10 +765,10 @@ printf "\033[32m Amplify Agent log can be found here:\033[0m\n"
 printf "     /var/log/amplify-agent/agent.log\n\n"
 
 printf "\033[32m After the agent is launched, it takes a couple of minutes for this system to appear\033[0m\n"
-printf "\033[32m in the Amplify user interface.\033[0m\n\n"
+printf "\033[32m in the GetPageSpeed Amplify dashboard at https://amplify.getpagespeed.com\033[0m\n\n"
 
 printf "\033[32m PLEASE CHECK THE DOCUMENTATION HERE:\033[0m\n"
-printf "     https://amplify.nginx.com/docs/\n\n"
+printf "     https://amplify.getpagespeed.com/getting-started\n\n"
 
 # Check for an older version of the agent running
 if [ -f "${amplify_pid_file}" ]; then
