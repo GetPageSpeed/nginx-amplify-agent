@@ -58,7 +58,14 @@ See https://amplify.getpagespeed.com for more information
 
 
 %build
+# For EL7/EL8, upgrade pip first to get proper wheel support, and force binary packages
+# to avoid build issues with setuptools_scm on Python 3.6
+%if (0%{?rhel} >= 7 && 0%{?rhel} <= 8) || (0%{?sle_version} > 0 && 0%{?sle_version} < 160000)
+%{__python3} -m pip install --upgrade pip
+%{__python3} -m pip install --upgrade --target=amplify --no-compile --only-binary=ujson,greenlet -r %%REQUIREMENTS%%
+%else
 %{__python3} -m pip install --upgrade --target=amplify --no-compile -r %%REQUIREMENTS%%
+%endif
 %if 0%{?rhel} == 9
 # https://github.com/pypa/pip/issues/10629
 %{__python3} -m pip install --upgrade --target=amplify_ --no-compile zope.event
