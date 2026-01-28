@@ -37,7 +37,7 @@ Requires: python3-psutil
 Requires: initscripts >= 8.36
 Requires(post): chkconfig
 
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 %define _debugsource_template %{nil}
 %undefine _missing_build_ids_terminate_build
 %endif
