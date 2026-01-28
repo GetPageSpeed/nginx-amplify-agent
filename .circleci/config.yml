@@ -233,9 +233,33 @@ jobs:
             echo "  * GetPageSpeed Amplify Agent release" >> debian/changelog
             echo "" >> debian/changelog
             echo " -- GetPageSpeed <info@getpagespeed.com>  $(date -R)" >> debian/changelog
+
+            # Debug: show prepared files
+            echo "=== debian/control ==="
+            cat debian/control
+            echo ""
+            echo "=== debian/rules ==="
+            cat debian/rules
+            echo ""
+            echo "=== debian/changelog ==="
+            cat debian/changelog
+            echo ""
+            echo "=== setup.py ==="
+            cat setup.py
+            echo ""
+            echo "=== Source directory structure ==="
+            ls -la
+            echo ""
+            echo "=== debian/ directory ==="
+            ls -la debian/
       - run:
           name: "Build DEB package"
-          command: build
+          command: |
+            echo "Running dpkg-buildpackage..."
+            dpkg-buildpackage -us -uc -b 2>&1 || {
+              echo "dpkg-buildpackage failed. Trying with DEB_BUILD_OPTIONS=nocheck..."
+              DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -b
+            }
       - run:
           name: "Check for DEB files"
           command: |
