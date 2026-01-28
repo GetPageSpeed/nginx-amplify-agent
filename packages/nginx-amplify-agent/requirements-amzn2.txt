@@ -8,4 +8,4 @@ rstr>=3.0.0
 psutil>=5.8.0
 python-daemon>=2.2.4
 ujson==4.3.0
-PyMySQL>=1.1.1
+PyMySQL>=1.0.0,<1.1
