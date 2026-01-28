@@ -3,6 +3,15 @@
 %define nginx_group nginx
 %define _python_bytecompile_errors_terminate_build 0
 
+# Define flag for systems that need binary wheels (older Python 3.6/3.7)
+# EL7/EL8 have Python 3.6, SLES 15 has Python 3.6
+%if 0%{?rhel} >= 7 && 0%{?rhel} <= 8
+%global _need_binary_wheels 1
+%endif
+%if 0%{?sle_version} >= 150000 && 0%{?sle_version} < 160000
+%global _need_binary_wheels 1
+%endif
+
 Summary: GetPageSpeed Amplify Agent
 Name: nginx-amplify-agent
 Version: %%AMPLIFY_AGENT_VERSION%%
@@ -58,9 +67,9 @@ See https://amplify.getpagespeed.com for more information
 
 
 %build
-# For EL7/EL8, upgrade pip first to get proper wheel support, and force binary packages
+# For EL7/EL8/SLES15, upgrade pip first to get proper wheel support, and force binary packages
 # to avoid build issues with setuptools_scm on Python 3.6
-%if (0%{?rhel} >= 7 && 0%{?rhel} <= 8) || (0%{?sle_version} > 0 && 0%{?sle_version} < 160000)
+%if 0%{?_need_binary_wheels}
 %{__python3} -m pip install --upgrade pip
 %{__python3} -m pip install --upgrade --target=amplify --no-compile --only-binary=ujson,greenlet -r %%REQUIREMENTS%%
 %else
