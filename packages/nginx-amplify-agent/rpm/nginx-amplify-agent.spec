@@ -3,13 +3,13 @@
 %define nginx_group nginx
 %define _python_bytecompile_errors_terminate_build 0
 
-Summary: NGINX Amplify Agent
+Summary: GetPageSpeed Amplify Agent
 Name: nginx-amplify-agent
 Version: %%AMPLIFY_AGENT_VERSION%%
 Release: %%AMPLIFY_AGENT_RELEASE%%%{?dist}
-Vendor: NGINX Packaging <nginx-packaging@f5.com>
+Vendor: GetPageSpeed <info@getpagespeed.com>
 Group: System Environment/Daemons
-URL: https://github.com/nginxinc/nginx-amplify-agent
+URL: https://github.com/GetPageSpeed/nginx-amplify-agent
 License: 2-clause BSD-like license
 
 Source0: nginx-amplify-agent-%{version}.tar.gz
@@ -42,12 +42,12 @@ Requires(post): chkconfig
 
 
 %description
-The NGINX Amplify Agent is a small, Python application that
+The GetPageSpeed Amplify Agent is a small, Python application that
 provides system and NGINX metric collection. It is part of
-NGINX Amplify - the monitoring and configuration assistance
+GetPageSpeed Amplify - the monitoring and configuration assistance
 service for NGINX.
-This package installs and runs NGINX Amplify Agent daemon.
-See http://nginx.com/amplify for more information
+This package installs and runs GetPageSpeed Amplify Agent daemon.
+See https://amplify.getpagespeed.com for more information
 
 
 %prep
@@ -131,8 +131,8 @@ elif [ $1 -eq 2 ] ; then
         service amplify-agent stop > /dev/null 2>&1 < /dev/null
     fi
 
-    # Change API URL to 1.4
-    sh -c "sed -i.old 's/api_url.*receiver.*$/api_url = https:\/\/receiver.amplify.nginx.com:443\/1.4/' \
+    # Change API URL to GetPageSpeed Amplify
+    sh -c "sed -i.old 's/api_url.*$/api_url = https:\/\/amplify.getpagespeed.com:443\/1.4/' \
         %{agent_conf_file}"
 
     # Add PHP-FPM to config file
@@ -157,6 +157,11 @@ fi
 
 
 %changelog
+* Tue Jan 28 2025 GetPageSpeed <info@getpagespeed.com> 1.8.3-2
+- 1.8.3-2
+- Rebranded for GetPageSpeed Amplify
+- Updated API URL to amplify.getpagespeed.com
+
 * Wed Jan  8 2025 Andrei Belov <a.belov@f5.com> 1.8.3-1
 - 1.8.3-1
 - migrated to the most recent daemonizing logic (PEP 3143)

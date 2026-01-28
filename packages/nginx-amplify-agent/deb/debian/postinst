@@ -34,8 +34,8 @@ else
         service amplify-agent stop > /dev/null 2>&1 < /dev/null
     fi
 
-    # change API URL to 1.4
-    sh -c "sed -i.old 's/api_url.*receiver.*$/api_url = https:\/\/receiver.amplify.nginx.com:443\/1.4/' \
+    # change API URL to GetPageSpeed Amplify
+    sh -c "sed -i.old 's/api_url.*$/api_url = https:\/\/amplify.getpagespeed.com:443\/1.4/' \
         ${agent_conf_file}"
 
     # add PHP-FPM to config file
