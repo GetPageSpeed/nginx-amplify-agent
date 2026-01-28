@@ -5,6 +5,9 @@ INSTALLDIR = $(CURDIR)/debian/nginx-amplify-agent
 %:
 	dh $@ --with python3
 
+override_dh_auto_configure:
+	# No configuration needed - using custom build
+
 override_dh_auto_build:
 	python3 -m pip install --upgrade --target=amplify --no-compile -r %%REQUIREMENTS%%
 	python3 setup.py build
