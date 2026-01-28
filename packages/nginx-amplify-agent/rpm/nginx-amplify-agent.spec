@@ -19,6 +19,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 BuildRequires: python3-devel
 BuildRequires: python3-pip
+BuildRequires: python3-setuptools
 
 %if 0%{?amzn} >= 2
 Requires: python3 >= 3.7
