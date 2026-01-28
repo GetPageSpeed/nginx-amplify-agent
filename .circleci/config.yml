@@ -84,12 +84,24 @@ jobs:
             sed -i "s/%%AMPLIFY_AGENT_RELEASE%%/$RELEASE/g" nginx-amplify-agent.spec
 
             # Select requirements file based on distro
+            # Python 3.6 distros (el7, el8, sles15, amzn2) need older gevent (<24.0)
+            # Python 3.9+ distros (el9, el10, fc*, sles16, amzn2023) can use modern gevent
             REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements.txt"
-            if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ] && [[ "<< parameters.dist >>" == "el9" || "<< parameters.dist >>" == "el10" ]]; then
-              REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
-            elif [ -f "packages/nginx-amplify-agent/requirements-amzn2.txt" ] && [[ "<< parameters.dist >>" == "amzn2" || "<< parameters.dist >>" == "amzn2023" ]]; then
-              REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-amzn2.txt"
-            fi
+            DIST="<< parameters.dist >>"
+            case "$DIST" in
+              el7|el8|sles15|amzn2)
+                # Python 3.6/3.7 - need older gevent
+                if [ -f "packages/nginx-amplify-agent/requirements-amzn2.txt" ]; then
+                  REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-amzn2.txt"
+                fi
+                ;;
+              el9|el10|fc*|sles16|amzn2023)
+                # Python 3.9+ - can use modern gevent
+                if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
+                  REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
+                fi
+                ;;
+            esac
 
             # Substitute requirements file placeholder
             sed -i "s|%%REQUIREMENTS%%|$REQUIREMENTS_FILE|g" nginx-amplify-agent.spec
@@ -198,12 +210,25 @@ jobs:
               cp packages/nginx-amplify-agent/setup.py .
             fi
 
+            # Select requirements file based on suite
+            # Ubuntu focal (20.04) has Python 3.8, jammy (22.04) has 3.10, noble (24.04) has 3.12
+            # Debian bookworm has Python 3.11
+            # All modern enough to use rhel9 requirements
+            REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements.txt"
+            if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
+              REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
+            fi
+
+            # Substitute requirements placeholder in debian/rules
+            sed -i "s|%%REQUIREMENTS%%|$REQUIREMENTS_FILE|g" debian/rules
+            echo "Using requirements file: $REQUIREMENTS_FILE"
+
             # Read version
             VERSION=$(cat packages/version | cut -d- -f1)
-            SUITE="<< parameters.suite >>"
 
             # Create changelog with version (avoiding heredoc due to CircleCI syntax)
-            echo "nginx-amplify-agent (${VERSION}-1) ${SUITE}; urgency=low" > debian/changelog
+            # Use the extracted codename (focal, bookworm) not the full suite name (ubuntu-focal)
+            echo "nginx-amplify-agent (${VERSION}-1) ${SUITE_NAME}; urgency=low" > debian/changelog
             echo "" >> debian/changelog
             echo "  * GetPageSpeed Amplify Agent release" >> debian/changelog
             echo "" >> debian/changelog
