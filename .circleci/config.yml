@@ -181,7 +181,9 @@ jobs:
             cp -r packages/nginx-amplify-agent/deb/debian .
 
             # Select the right control file for this suite
-            CONTROL_FILE="debian/control.<< parameters.suite >>"
+            # Suite is like "ubuntu-focal" or "debian-bookworm", extract just the codename
+            SUITE_NAME=$(echo "<< parameters.suite >>" | sed 's/^ubuntu-//' | sed 's/^debian-//')
+            CONTROL_FILE="debian/control.${SUITE_NAME}"
             if [ -f "$CONTROL_FILE" ]; then
               cp "$CONTROL_FILE" debian/control
             else
@@ -189,8 +191,12 @@ jobs:
               cp debian/control.bookworm debian/control
             fi
 
-            # Copy setup.py to root
-            cp packages/nginx-amplify-agent/setup.py .
+            # Copy setup.py to root (use the DEB-specific one that avoids circular imports)
+            if [ -f packages/nginx-amplify-agent/setup-deb.py ]; then
+              cp packages/nginx-amplify-agent/setup-deb.py setup.py
+            else
+              cp packages/nginx-amplify-agent/setup.py .
+            fi
 
             # Read version
             VERSION=$(cat packages/version | cut -d- -f1)
