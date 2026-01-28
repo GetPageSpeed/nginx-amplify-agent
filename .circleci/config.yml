@@ -33,7 +33,8 @@ executors:
         type: string
         default: amd64
     docker:
-      - image: getpagespeed/debbuilder:<< parameters.suite >>-<< parameters.arch >>
+      # Image tags are like debian-bookworm, ubuntu-jammy (multi-arch, no arch suffix)
+      - image: getpagespeed/debbuilder:<< parameters.suite >>
     working_directory: /sources
     environment:
       SUITE: << parameters.suite >>
@@ -383,5 +384,62 @@ workflows:
           name: deploy-sles16-x86_64
           requires: [build-sles16-x86_64]
 
-  # DEB builds disabled - debbuilder images not available on Docker Hub
-  # Re-enable when getpagespeed/debbuilder images are published
+  # DEB builds - Ubuntu Focal (20.04)
+  build-deploy-focal-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: ubuntu-focal
+          arch: amd64
+          name: build-focal-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: ubuntu-focal
+          name: deploy-focal-amd64
+          requires: [build-focal-amd64]
+
+  # DEB builds - Ubuntu Jammy (22.04)
+  build-deploy-jammy-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: ubuntu-jammy
+          arch: amd64
+          name: build-jammy-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: ubuntu-jammy
+          name: deploy-jammy-amd64
+          requires: [build-jammy-amd64]
+
+  # DEB builds - Ubuntu Noble (24.04)
+  build-deploy-noble-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: ubuntu-noble
+          arch: amd64
+          name: build-noble-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: noble
+          name: deploy-noble-amd64
+          requires: [build-noble-amd64]
+
+  # DEB builds - Debian Bookworm (12)
+  build-deploy-bookworm-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: debian-bookworm
+          arch: amd64
+          name: build-bookworm-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: debian-bookworm
+          name: deploy-bookworm-amd64
+          requires: [build-bookworm-amd64]
