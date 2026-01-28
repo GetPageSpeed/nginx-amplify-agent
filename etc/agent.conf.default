@@ -20,7 +20,7 @@ launchers =
 https =
 
 [cloud]
-api_url = https://receiver.amplify.nginx.com:443/1.4
+api_url = https://amplify.getpagespeed.com:443/1.4
 api_timeout = 5.0
 
 [extensions]

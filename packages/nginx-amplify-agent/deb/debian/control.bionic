@@ -1,6 +1,6 @@
 Source: nginx-amplify-agent
-Homepage: https://github.com/nginxinc/nginx-amplify-agent
-Maintainer: NGINX Packaging <nginx-packaging@f5.com>
+Homepage: https://github.com/GetPageSpeed/nginx-amplify-agent
+Maintainer: GetPageSpeed <info@getpagespeed.com>
 Section: python
 Priority: optional
 Build-Depends: debhelper (>= 11),
@@ -10,14 +10,14 @@ Build-Depends: debhelper (>= 11),
 Standards-Version: 4.1.4
 
 Package: nginx-amplify-agent
-Description: Agent for NGINX Amplify monitoring platform
- The NGINX Amplify Agent is a small, Python application that provides
- system and NGINX metric collection. It is part of NGINX Amplify -
+Description: Agent for GetPageSpeed Amplify monitoring platform
+ The GetPageSpeed Amplify Agent is a small, Python application that provides
+ system and NGINX metric collection. It is part of GetPageSpeed Amplify -
  the monitoring and configuration assistance service for NGINX.
  .
- This package installs and runs NGINX Amplify Agent daemon.
+ This package installs and runs GetPageSpeed Amplify Agent daemon.
  .
- See http://nginx.com/amplify for more information
+ See https://amplify.getpagespeed.com for more information
 Architecture: any
 Depends: ${misc:Depends},
          ${python3:Depends},

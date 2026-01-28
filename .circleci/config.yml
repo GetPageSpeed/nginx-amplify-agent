@@ -1,0 +1,460 @@
+version: 2.1
+
+executors:
+  deploy:
+    parameters:
+      dist:
+        type: string
+      arch:
+        type: string
+    docker:
+      - image: kroniak/ssh-client
+    working_directory: /output
+    environment:
+      DISTRO: << parameters.dist >>
+      ARCH: << parameters.arch >>
+  rpmbuilder:
+    parameters:
+      dist:
+        type: string
+      rpmlint:
+        type: integer
+        default: 1
+    docker:
+      - image: getpagespeed/rpmbuilder:<< parameters.dist >>
+    working_directory: /sources
+    environment:
+      RPMLINT: << parameters.rpmlint >>
+  debbuilder:
+    parameters:
+      suite:
+        type: string
+      arch:
+        type: string
+        default: amd64
+    docker:
+      - image: getpagespeed/debbuilder:<< parameters.suite >>-<< parameters.arch >>
+    working_directory: /sources
+    environment:
+      SUITE: << parameters.suite >>
+      ARCH: << parameters.arch >>
+  deploy-deb:
+    parameters:
+      suite:
+        type: string
+      arch:
+        type: string
+    docker:
+      - image: kroniak/ssh-client
+    working_directory: /output
+    environment:
+      SUITE: << parameters.suite >>
+      ARCH: << parameters.arch >>
+
+jobs:
+  build-rpm:
+    parameters:
+      dist:
+        description: "The dist tag of OS to build for"
+        type: string
+      resource_class:
+        description: "The resource class to use for the build"
+        type: string
+        default: "medium"
+    resource_class: << parameters.resource_class >>
+    executor:
+      name: rpmbuilder
+      dist: << parameters.dist >>
+    steps:
+      - checkout
+      - run:
+          name: "Prepare spec file and sources"
+          command: |
+            # Copy spec file to root
+            cp packages/nginx-amplify-agent/rpm/nginx-amplify-agent.spec .
+            cp packages/nginx-amplify-agent/rpm/nginx-amplify-agent.service .
+
+            # Read version from packages/version
+            VERSION=$(cat packages/version | cut -d- -f1)
+            RELEASE=$(cat packages/version | cut -d- -f2)
+
+            # Substitute version placeholders
+            sed -i "s/%%AMPLIFY_AGENT_VERSION%%/$VERSION/g" nginx-amplify-agent.spec
+            sed -i "s/%%AMPLIFY_AGENT_RELEASE%%/$RELEASE/g" nginx-amplify-agent.spec
+
+            # Select requirements file based on distro
+            REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements.txt"
+            if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ] && [[ "<< parameters.dist >>" == "el9" || "<< parameters.dist >>" == "el10" ]]; then
+              REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
+            elif [ -f "packages/nginx-amplify-agent/requirements-amzn2.txt" ] && [[ "<< parameters.dist >>" == "amzn2" || "<< parameters.dist >>" == "amzn2023" ]]; then
+              REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-amzn2.txt"
+            fi
+
+            # Substitute requirements file placeholder
+            sed -i "s|%%REQUIREMENTS%%|$REQUIREMENTS_FILE|g" nginx-amplify-agent.spec
+
+            echo "Using requirements file: $REQUIREMENTS_FILE"
+            cat "$REQUIREMENTS_FILE"
+      - run:
+          name: "Run the build"
+          command: build
+      - run:
+          name: "Check for RPM files and halt if none exist"
+          command: |
+            set -x
+            if ls /output/*.rpm 1> /dev/null 2>&1; then
+              echo "RPM files found. Proceeding with persistence to workspace."
+            else
+              echo "No RPM files found. Halting the job."
+              curl --request POST --url https://circleci.com/api/v2/workflow/$CIRCLE_WORKFLOW_ID/cancel --header "Circle-Token: ${CIRCLE_TOKEN}"
+              circleci-agent step halt
+            fi
+      - persist_to_workspace:
+          root: /output
+          paths:
+            - "*.rpm"
+
+  deploy-rpm:
+    parameters:
+      dist:
+        description: "The dist tag of OS to deploy for"
+        type: string
+      arch:
+        description: "The architecture to deploy for"
+        type: string
+    executor:
+      name: deploy
+      dist: << parameters.dist >>
+      arch: << parameters.arch >>
+    steps:
+      - attach_workspace:
+          at: /output
+      - add_ssh_keys:
+          fingerprints:
+            - "8c:a4:dd:2c:47:4c:63:aa:90:0b:e0:d6:15:be:87:82"
+      - run:
+          name: "Ensure project specific upload directory to avoid deploy collisions"
+          command: >
+            ssh -o StrictHostKeyChecking=no
+            $GPS_BUILD_USER@$GPS_BUILD_SERVER
+            "mkdir -p ~/incoming/${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${ARCH}/${CIRCLE_BRANCH}"
+      - run:
+          name: "Deploy all RPMs to GetPageSpeed repo."
+          command: |
+            echo "Uploading RPMs..."
+            ls -al
+            echo "Target upload directory: ~/incoming/${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${ARCH}/${CIRCLE_BRANCH}/"
+            scp -o StrictHostKeyChecking=no -q -r *.rpm $GPS_BUILD_USER@$GPS_BUILD_SERVER:~/incoming/${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${ARCH}/${CIRCLE_BRANCH}/
+      - run:
+          name: "Trigger Deploy Hook."
+          command: >
+            ssh -o StrictHostKeyChecking=no -q
+            $GPS_BUILD_USER@$GPS_BUILD_SERVER
+            "nohup ~/scripts/incoming.sh ${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${ARCH}/${CIRCLE_BRANCH}/ > ~/incoming/$CIRCLE_PROJECT_REPONAME/$DISTRO/${ARCH}/${CIRCLE_BRANCH}/process.log 2>&1&"
+
+  build-deb:
+    parameters:
+      suite:
+        description: "The Debian/Ubuntu suite to build for"
+        type: string
+      arch:
+        description: "The architecture to build for"
+        type: string
+        default: "amd64"
+      resource_class:
+        description: "The resource class to use for the build"
+        type: string
+        default: "medium"
+    resource_class: << parameters.resource_class >>
+    executor:
+      name: debbuilder
+      suite: << parameters.suite >>
+      arch: << parameters.arch >>
+    steps:
+      - checkout
+      - run:
+          name: "Prepare DEB package sources"
+          command: |
+            # The DEB build needs setup from packages directory
+            # Copy debian directory to the source root
+            cp -r packages/nginx-amplify-agent/deb/debian .
+
+            # Select the right control file for this suite
+            CONTROL_FILE="debian/control.<< parameters.suite >>"
+            if [ -f "$CONTROL_FILE" ]; then
+              cp "$CONTROL_FILE" debian/control
+            else
+              # Fall back to a reasonable default
+              cp debian/control.bookworm debian/control
+            fi
+
+            # Copy setup.py to root
+            cp packages/nginx-amplify-agent/setup.py .
+
+            # Read version
+            VERSION=$(cat packages/version | cut -d- -f1)
+
+            # Create changelog with version
+            cat > debian/changelog << EOF
+            nginx-amplify-agent (${VERSION}-1) << parameters.suite >>; urgency=low
+
+              * GetPageSpeed Amplify Agent release
+
+             -- GetPageSpeed <info@getpagespeed.com>  $(date -R)
+            EOF
+      - run:
+          name: "Build DEB package"
+          command: build
+      - run:
+          name: "Check for DEB files"
+          command: |
+            if ls /output/*.deb 1> /dev/null 2>&1; then
+              echo "DEB files found. Proceeding."
+            else
+              echo "No DEB files found. Halting."
+              circleci-agent step halt
+            fi
+      - persist_to_workspace:
+          root: /output
+          paths:
+            - "*.deb"
+            - "*.changes"
+
+  deploy-deb:
+    parameters:
+      suite:
+        description: "The Debian/Ubuntu suite to deploy for"
+        type: string
+      arch:
+        description: "The architecture to deploy for"
+        type: string
+    executor:
+      name: deploy-deb
+      suite: << parameters.suite >>
+      arch: << parameters.arch >>
+    steps:
+      - attach_workspace:
+          at: /output
+      - add_ssh_keys:
+          fingerprints:
+            - "8c:a4:dd:2c:47:4c:63:aa:90:0b:e0:d6:15:be:87:82"
+      - run:
+          name: "Ensure project specific upload directory"
+          command: >
+            ssh -o StrictHostKeyChecking=no
+            $GPS_BUILD_USER@$GPS_BUILD_SERVER
+            "mkdir -p ~/incoming/${CIRCLE_PROJECT_REPONAME}/${SUITE}/${ARCH}/${CIRCLE_BRANCH}"
+      - run:
+          name: "Deploy all DEBs to GetPageSpeed repo."
+          command: |
+            echo "Uploading DEBs..."
+            ls -al
+            scp -o StrictHostKeyChecking=no -q -r *.deb *.changes $GPS_BUILD_USER@$GPS_BUILD_SERVER:~/incoming/${CIRCLE_PROJECT_REPONAME}/${SUITE}/${ARCH}/${CIRCLE_BRANCH}/
+      - run:
+          name: "Trigger Deploy Hook."
+          command: >
+            ssh -o StrictHostKeyChecking=no -q
+            $GPS_BUILD_USER@$GPS_BUILD_SERVER
+            "nohup ~/scripts/incoming-deb.sh ${CIRCLE_PROJECT_REPONAME}/${SUITE}/${ARCH}/${CIRCLE_BRANCH}/ > ~/incoming/$CIRCLE_PROJECT_REPONAME/$SUITE/${ARCH}/${CIRCLE_BRANCH}/process.log 2>&1&"
+
+workflows:
+  # RPM builds - EL7
+  build-deploy-el7-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: el7
+          name: build-el7-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: el7
+          name: deploy-el7-x86_64
+          requires: [build-el7-x86_64]
+
+  # RPM builds - EL8
+  build-deploy-el8-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: el8
+          name: build-el8-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: el8
+          name: deploy-el8-x86_64
+          requires: [build-el8-x86_64]
+
+  # RPM builds - EL9
+  build-deploy-el9-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: el9
+          name: build-el9-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: el9
+          name: deploy-el9-x86_64
+          requires: [build-el9-x86_64]
+
+  # RPM builds - Amazon Linux 2
+  build-deploy-amzn2-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: amzn2
+          name: build-amzn2-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: amzn2
+          name: deploy-amzn2-x86_64
+          requires: [build-amzn2-x86_64]
+
+  # RPM builds - Amazon Linux 2023
+  build-deploy-amzn2023-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: amzn2023
+          name: build-amzn2023-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: amzn2023
+          name: deploy-amzn2023-x86_64
+          requires: [build-amzn2023-x86_64]
+
+  # RPM builds - Fedora 42
+  build-deploy-fc42-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: fc42
+          name: build-fc42-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: fc42
+          name: deploy-fc42-x86_64
+          requires: [build-fc42-x86_64]
+
+  # RPM builds - Fedora 43
+  build-deploy-fc43-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: fc43
+          name: build-fc43-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: fc43
+          name: deploy-fc43-x86_64
+          requires: [build-fc43-x86_64]
+
+  # RPM builds - SLES 15
+  build-deploy-sles15-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: sles15
+          name: build-sles15-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: sles15
+          name: deploy-sles15-x86_64
+          requires: [build-sles15-x86_64]
+
+  # RPM builds - SLES 16
+  build-deploy-sles16-x86_64:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: sles16
+          name: build-sles16-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: sles16
+          name: deploy-sles16-x86_64
+          requires: [build-sles16-x86_64]
+
+  # DEB builds - Ubuntu Focal (20.04)
+  build-deploy-focal-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: focal
+          arch: amd64
+          name: build-focal-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: focal
+          name: deploy-focal-amd64
+          requires: [build-focal-amd64]
+
+  # DEB builds - Ubuntu Jammy (22.04)
+  build-deploy-jammy-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: jammy
+          arch: amd64
+          name: build-jammy-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: jammy
+          name: deploy-jammy-amd64
+          requires: [build-jammy-amd64]
+
+  # DEB builds - Ubuntu Noble (24.04)
+  build-deploy-noble-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: noble
+          arch: amd64
+          name: build-noble-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: noble
+          name: deploy-noble-amd64
+          requires: [build-noble-amd64]
+
+  # DEB builds - Debian Bullseye (11)
+  build-deploy-bullseye-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: bullseye
+          arch: amd64
+          name: build-bullseye-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: bullseye
+          name: deploy-bullseye-amd64
+          requires: [build-bullseye-amd64]
+
+  # DEB builds - Debian Bookworm (12)
+  build-deploy-bookworm-amd64:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: bookworm
+          arch: amd64
+          name: build-bookworm-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: bookworm
+          name: deploy-bookworm-amd64
+          requires: [build-bookworm-amd64]
