@@ -19,7 +19,7 @@ data_files = [
         ],
     ),
     ("/etc/logrotate.d/", ["etc/logrotate.d/amplify-agent"]),
-    ("/etc/init.d/", ["etc/lsb-base/amplify-agent"]),
+    ("/etc/init.d/", ["etc/init.d/amplify-agent"]),
 ]
 
 setup(
