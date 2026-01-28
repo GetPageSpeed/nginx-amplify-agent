@@ -193,15 +193,14 @@ jobs:
 
             # Read version
             VERSION=$(cat packages/version | cut -d- -f1)
+            SUITE="<< parameters.suite >>"
 
-            # Create changelog with version
-            cat > debian/changelog << EOF
-            nginx-amplify-agent (${VERSION}-1) << parameters.suite >>; urgency=low
-
-              * GetPageSpeed Amplify Agent release
-
-             -- GetPageSpeed <info@getpagespeed.com>  $(date -R)
-            EOF
+            # Create changelog with version (avoiding heredoc due to CircleCI syntax)
+            echo "nginx-amplify-agent (${VERSION}-1) ${SUITE}; urgency=low" > debian/changelog
+            echo "" >> debian/changelog
+            echo "  * GetPageSpeed Amplify Agent release" >> debian/changelog
+            echo "" >> debian/changelog
+            echo " -- GetPageSpeed <info@getpagespeed.com>  $(date -R)" >> debian/changelog
       - run:
           name: "Build DEB package"
           command: build
