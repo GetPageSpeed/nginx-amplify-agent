@@ -4,11 +4,8 @@
 %define _python_bytecompile_errors_terminate_build 0
 
 # Define flag for systems that need binary wheels (older Python 3.6/3.7)
-# EL7/EL8 have Python 3.6, SLES 15 has Python 3.6
+# EL7/EL8 have Python 3.6
 %if 0%{?rhel} >= 7 && 0%{?rhel} <= 8
-%global _need_binary_wheels 1
-%endif
-%if 0%{?sle_version} >= 150000 && 0%{?sle_version} < 160000
 %global _need_binary_wheels 1
 %endif
 
