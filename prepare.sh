@@ -61,24 +61,17 @@ echo "Detected distro: $DIST"
 
 REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements.txt"
 
+# Python 3.6 distros (el7, el8, sles15, amzn2) need older gevent (<24.0)
+# Python 3.9+ distros (el9, el10, fc*, sles16, amzn2023) can use modern gevent
 case "$DIST" in
-    el9|el10|fc*)
-        if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
-            REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
-        fi
-        ;;
-    amzn2)
+    el7|el8|sles15|amzn2)
+        # Python 3.6/3.7 - need older gevent
         if [ -f "packages/nginx-amplify-agent/requirements-amzn2.txt" ]; then
             REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-amzn2.txt"
         fi
         ;;
-    amzn2023)
-        # amzn2023 uses Python 3.9+, can use rhel9 requirements
-        if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
-            REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
-        fi
-        ;;
-    sles*)
+    el9|el10|fc*|sles16|amzn2023)
+        # Python 3.9+ - can use modern gevent
         if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
             REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
         fi
