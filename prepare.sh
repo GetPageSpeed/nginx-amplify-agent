@@ -23,19 +23,62 @@ cp packages/nginx-amplify-agent/rpm/nginx-amplify-agent.service .
 sed -i.bak "s/%%AMPLIFY_AGENT_VERSION%%/$VERSION/g" nginx-amplify-agent.spec
 sed -i.bak "s/%%AMPLIFY_AGENT_RELEASE%%/$RELEASE/g" nginx-amplify-agent.spec
 
-# Select requirements file based on distro (passed as $1 or default)
-DIST="${1:-el9}"
+# Select requirements file based on distro
+# If argument passed, use it; otherwise detect from /etc/os-release
+if [ -n "${1:-}" ]; then
+    DIST="$1"
+elif [ -f /etc/os-release ]; then
+    # Detect distro from os-release
+    source /etc/os-release
+    case "$ID" in
+        amzn)
+            if [ "$VERSION_ID" = "2" ]; then
+                DIST="amzn2"
+            else
+                DIST="amzn2023"
+            fi
+            ;;
+        rhel|rocky|almalinux|centos)
+            DIST="el${VERSION_ID%%.*}"
+            ;;
+        fedora)
+            DIST="fc${VERSION_ID}"
+            ;;
+        opensuse*|sles)
+            DIST="sles${VERSION_ID%%.*}"
+            ;;
+        *)
+            DIST="el9"  # fallback
+            ;;
+    esac
+else
+    DIST="el9"  # fallback
+fi
+
+echo "Detected distro: $DIST"
+
 REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements.txt"
 
 case "$DIST" in
-    el9|el10)
+    el9|el10|fc*)
         if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
             REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
         fi
         ;;
-    amzn2|amzn2023)
+    amzn2)
         if [ -f "packages/nginx-amplify-agent/requirements-amzn2.txt" ]; then
             REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-amzn2.txt"
+        fi
+        ;;
+    amzn2023)
+        # amzn2023 uses Python 3.9+, can use rhel9 requirements
+        if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
+            REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
+        fi
+        ;;
+    sles*)
+        if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
+            REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
         fi
         ;;
 esac
