@@ -316,7 +316,11 @@ jobs:
           command: |
             echo "Uploading DEBs..."
             ls -al
-            scp -o StrictHostKeyChecking=no -q -r *.deb *.changes $GPS_BUILD_USER@$GPS_BUILD_SERVER:~/incoming/${CIRCLE_PROJECT_REPONAME}/${SUITE}/${ARCH}/${CIRCLE_BRANCH}/
+            # Upload .deb files (required) and .changes files (optional)
+            scp -o StrictHostKeyChecking=no -q -r *.deb $GPS_BUILD_USER@$GPS_BUILD_SERVER:~/incoming/${CIRCLE_PROJECT_REPONAME}/${SUITE}/${ARCH}/${CIRCLE_BRANCH}/
+            if ls *.changes 1>/dev/null 2>&1; then
+              scp -o StrictHostKeyChecking=no -q -r *.changes $GPS_BUILD_USER@$GPS_BUILD_SERVER:~/incoming/${CIRCLE_PROJECT_REPONAME}/${SUITE}/${ARCH}/${CIRCLE_BRANCH}/
+            fi
       - run:
           name: "Trigger Deploy Hook."
           command: >
