@@ -9,48 +9,50 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # Read version from packages/version
-VERSION=$(cut -d- -f1 < packages/version)
-RELEASE=$(cut -d- -f2 < packages/version)
+PKG_VERSION=$(cut -d- -f1 < packages/version)
+PKG_RELEASE=$(cut -d- -f2 < packages/version)
 
-echo "Version: $VERSION"
-echo "Release: $RELEASE"
+echo "Version: $PKG_VERSION"
+echo "Release: $PKG_RELEASE"
 
 # Copy spec file to root
 cp packages/nginx-amplify-agent/rpm/nginx-amplify-agent.spec .
 cp packages/nginx-amplify-agent/rpm/nginx-amplify-agent.service .
 
 # Substitute version placeholders
-sed -i.bak "s/%%AMPLIFY_AGENT_VERSION%%/$VERSION/g" nginx-amplify-agent.spec
-sed -i.bak "s/%%AMPLIFY_AGENT_RELEASE%%/$RELEASE/g" nginx-amplify-agent.spec
+sed -i.bak "s/%%AMPLIFY_AGENT_VERSION%%/$PKG_VERSION/g" nginx-amplify-agent.spec
+sed -i.bak "s/%%AMPLIFY_AGENT_RELEASE%%/$PKG_RELEASE/g" nginx-amplify-agent.spec
 
 # Select requirements file based on distro
 # If argument passed, use it; otherwise detect from /etc/os-release
 if [ -n "${1:-}" ]; then
     DIST="$1"
 elif [ -f /etc/os-release ]; then
-    # Detect distro from os-release
-    source /etc/os-release
-    case "$ID" in
-        amzn)
-            if [ "$VERSION_ID" = "2" ]; then
-                DIST="amzn2"
-            else
-                DIST="amzn2023"
-            fi
-            ;;
-        rhel|rocky|almalinux|centos)
-            DIST="el${VERSION_ID%%.*}"
-            ;;
-        fedora)
-            DIST="fc${VERSION_ID}"
-            ;;
-        opensuse*|sles)
-            DIST="sles${VERSION_ID%%.*}"
-            ;;
-        *)
-            DIST="el9"  # fallback
-            ;;
-    esac
+    # Detect distro from os-release (use subshell to avoid polluting our variables)
+    DIST=$(
+        source /etc/os-release
+        case "$ID" in
+            amzn)
+                if [ "$VERSION_ID" = "2" ]; then
+                    echo "amzn2"
+                else
+                    echo "amzn2023"
+                fi
+                ;;
+            rhel|rocky|almalinux|centos)
+                echo "el${VERSION_ID%%.*}"
+                ;;
+            fedora)
+                echo "fc${VERSION_ID}"
+                ;;
+            opensuse*|sles)
+                echo "sles${VERSION_ID%%.*}"
+                ;;
+            *)
+                echo "el9"  # fallback
+                ;;
+        esac
+    )
 else
     DIST="el9"  # fallback
 fi
@@ -93,7 +95,7 @@ echo "Using requirements file: $REQUIREMENTS_FILE"
 
 # Create source tarball
 # The spec expects nginx-amplify-agent-{version}.tar.gz with content in nginx-amplify-agent-{version}/ subdirectory
-TARBALL_NAME="nginx-amplify-agent-${VERSION}"
+TARBALL_NAME="nginx-amplify-agent-${PKG_VERSION}"
 TARBALL_FILE="${TARBALL_NAME}.tar.gz"
 
 echo "Creating source tarball: $TARBALL_FILE"
