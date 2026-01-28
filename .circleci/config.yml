@@ -253,13 +253,25 @@ jobs:
             echo "=== debian/ directory ==="
             ls -la debian/
       - run:
+          name: "Install build dependencies"
+          command: |
+            apt-get update
+            apt-get install -y python3-pip python3-setuptools dh-python debhelper
+      - run:
           name: "Build DEB package"
           command: |
             echo "Running dpkg-buildpackage..."
             dpkg-buildpackage -us -uc -b 2>&1 || {
-              echo "dpkg-buildpackage failed. Trying with DEB_BUILD_OPTIONS=nocheck..."
-              DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -us -uc -b
+              echo "dpkg-buildpackage failed with exit code $?"
+              echo "Showing debian/rules:"
+              cat debian/rules
+              exit 1
             }
+            echo "Build completed. Checking for output..."
+            ls -la ../*.deb || echo "No .deb files found in parent directory"
+            # Copy .deb files to /output
+            cp ../*.deb /output/ 2>/dev/null || echo "No .deb files to copy"
+            ls -la /output/
       - run:
           name: "Check for DEB files"
           command: |
