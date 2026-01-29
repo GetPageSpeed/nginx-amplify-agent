@@ -28,16 +28,19 @@ BuildRequires: python3-pip
 BuildRequires: python3-setuptools
 BuildRequires: systemd-rpm-macros
 
+# Filter out auto-generated requires for bundled Python packages
+%global __requires_exclude_from ^%{python3_sitelib}/amplify/.*$
+
 %if 0%{?amzn} >= 2
 Requires: python3 >= 3.7
 Requires: python3-requests
 %endif
 
-%if 0%{?rhel} == 9
+%if 0%{?rhel} >= 9
 Requires: python3 >= 3.9
 Requires: python3-requests
-Requires: python3-netifaces
 Requires: python3-psutil
+# netifaces is bundled since it's not available on EL10+
 %endif
 
 Requires: initscripts >= 8.36
