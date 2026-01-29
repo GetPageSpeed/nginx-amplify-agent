@@ -48,6 +48,9 @@ setup(
             "gevent/libev/*.so",
             "greenlet/*.so",
             "psutil/*.so",
+            "zope/*.py",
+            "zope/**/*.py",
+            "zope/**/*.so",
             "*.so",
         ]
     },
