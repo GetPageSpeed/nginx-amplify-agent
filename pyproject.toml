@@ -7,7 +7,7 @@ name = "nginx-amplify-agent"
 version = "1.8.3"
 description = "GetPageSpeed Amplify Agent"
 readme = "README.md"
-license = "BSD-2-Clause"
+license = {text = "BSD-2-Clause"}
 requires-python = ">=3.8"
 authors = [
     {name = "GetPageSpeed", email = "info@getpagespeed.com"},
