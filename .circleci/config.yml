@@ -108,6 +108,14 @@ jobs:
             echo "Using requirements file: $SOURCE_REQUIREMENTS (copied to requirements.txt)"
             cat requirements.txt
 
+            # Copy setup.py for RPM build (use the RPM-specific one that avoids circular imports)
+            if [ -f packages/nginx-amplify-agent/setup-rpm.py ]; then
+              cp packages/nginx-amplify-agent/setup-rpm.py setup.py
+            else
+              cp packages/nginx-amplify-agent/setup.py .
+            fi
+            echo "setup.py copied to root"
+
             # Substitute requirements file placeholder with the simple filename
             sed -i "s|%%REQUIREMENTS%%|requirements.txt|g" nginx-amplify-agent.spec
       - run:
