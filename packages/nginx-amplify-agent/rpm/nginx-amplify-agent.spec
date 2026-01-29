@@ -76,11 +76,10 @@ See https://amplify.getpagespeed.com for more information
 %else
 %{__python3} -m pip install --upgrade --target=amplify --no-compile -r %%REQUIREMENTS%%
 %endif
-%if 0%{?rhel} == 9
-# https://github.com/pypa/pip/issues/10629
+# Install zope.event which is required by gevent but not always pulled in as a dependency
+# See https://github.com/pypa/pip/issues/10629
 %{__python3} -m pip install --upgrade --target=amplify_ --no-compile zope.event
 %{__cp} -Pr amplify_/zope* amplify/
-%endif
 %{__python3} setup.py build
 
 
