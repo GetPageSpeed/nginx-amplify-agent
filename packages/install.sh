@@ -7,7 +7,7 @@
 
 packages_url="https://packages.amplify.getpagespeed.com"
 package_name="nginx-amplify-agent"
-public_key_url_rpm="https://rpm.getpagespeed.com/RPM-GPG-KEY-GETPAGESPEED"
+public_key_url_rpm="https://extras.getpagespeed.com/RPM-GPG-KEY-GETPAGESPEED"
 public_key_url_deb="https://packages.amplify.getpagespeed.com/deb-archive-keyring.gpg"
 keyring_path="/etc/apt/keyrings/getpagespeed-amplify.gpg"
 agent_conf_path="/etc/amplify-agent"
