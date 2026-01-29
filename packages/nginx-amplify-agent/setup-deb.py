@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Simplified setup.py for DEB builds.
 This version doesn't import from the amplify package to avoid circular dependencies.
@@ -24,7 +23,7 @@ data_files = [
 
 setup(
     name="nginx-amplify-agent",
-    version="1.8.3",
+    version="1.8.4",
     author="GetPageSpeed",
     author_email="info@getpagespeed.com",
     description="GetPageSpeed Amplify Agent",
