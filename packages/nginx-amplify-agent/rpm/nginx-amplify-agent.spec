@@ -172,6 +172,10 @@ fi
 
 
 %changelog
+* Wed Jan 29 2025 GetPageSpeed <info@getpagespeed.com> 1.8.3-3
+- 1.8.3-3
+- Fix CI build configuration
+
 * Tue Jan 28 2025 GetPageSpeed <info@getpagespeed.com> 1.8.3-2
 - 1.8.3-2
 - Rebranded for GetPageSpeed Amplify
