@@ -83,31 +83,33 @@ jobs:
             sed -i "s/%%AMPLIFY_AGENT_VERSION%%/$VERSION/g" nginx-amplify-agent.spec
             sed -i "s/%%AMPLIFY_AGENT_RELEASE%%/$RELEASE/g" nginx-amplify-agent.spec
 
-            # Select requirements file based on distro
+            # Select requirements file based on distro and copy to root
             # Python 3.6 distros (el7, el8, sles15, amzn2) need older gevent (<24.0)
             # Python 3.9+ distros (el9, el10, fc*, sles16, amzn2023) can use modern gevent
-            REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements.txt"
+            SOURCE_REQUIREMENTS="packages/nginx-amplify-agent/requirements.txt"
             DIST="<< parameters.dist >>"
             case "$DIST" in
               el7|el8|sles15|amzn2)
                 # Python 3.6/3.7 - need older gevent
                 if [ -f "packages/nginx-amplify-agent/requirements-amzn2.txt" ]; then
-                  REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-amzn2.txt"
+                  SOURCE_REQUIREMENTS="packages/nginx-amplify-agent/requirements-amzn2.txt"
                 fi
                 ;;
               el9|el10|fc*|sles16|amzn2023)
                 # Python 3.9+ - can use modern gevent
                 if [ -f "packages/nginx-amplify-agent/requirements-rhel9.txt" ]; then
-                  REQUIREMENTS_FILE="packages/nginx-amplify-agent/requirements-rhel9.txt"
+                  SOURCE_REQUIREMENTS="packages/nginx-amplify-agent/requirements-rhel9.txt"
                 fi
                 ;;
             esac
 
-            # Substitute requirements file placeholder
-            sed -i "s|%%REQUIREMENTS%%|$REQUIREMENTS_FILE|g" nginx-amplify-agent.spec
+            # Copy requirements to root so it's included in the tarball
+            cp "$SOURCE_REQUIREMENTS" requirements.txt
+            echo "Using requirements file: $SOURCE_REQUIREMENTS (copied to requirements.txt)"
+            cat requirements.txt
 
-            echo "Using requirements file: $REQUIREMENTS_FILE"
-            cat "$REQUIREMENTS_FILE"
+            # Substitute requirements file placeholder with the simple filename
+            sed -i "s|%%REQUIREMENTS%%|requirements.txt|g" nginx-amplify-agent.spec
       - run:
           name: "Run the build"
           command: build
