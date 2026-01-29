@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nginx-amplify-agent"
-dynamic = ["version"]
+version = "1.8.3"
 description = "GetPageSpeed Amplify Agent"
 readme = "README.md"
-license = {text = "BSD-2-Clause"}
+license = "BSD-2-Clause"
 requires-python = ">=3.8"
 authors = [
     {name = "GetPageSpeed", email = "info@getpagespeed.com"},
@@ -15,7 +15,6 @@ authors = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: BSD License",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -33,6 +32,9 @@ dependencies = [
     "psutil>=5.0.0",
     "netifaces>=0.10.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["amplify*"]
 
 [project.optional-dependencies]
 test = [
