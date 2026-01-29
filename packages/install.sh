@@ -530,7 +530,7 @@ case "$os" in
         incr_step
 
         case "$os$release" in
-            rhel8|rhel9|centos8|centos9|amzn2)
+            rhel8|rhel9|rhel10|centos8|centos9|centos10|amzn2|amzn2023)
                 check_python 3
                 python_supported=3
                 ;;
