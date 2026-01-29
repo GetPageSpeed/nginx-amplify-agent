@@ -30,7 +30,7 @@ BuildRequires: systemd-rpm-macros
 
 # Filter out auto-generated requires for bundled Python packages
 # These packages are vendored into amplify/ directory during build
-%global __requires_exclude ^python3.*dist\\(gevent\\)|python3.*dist\\(greenlet\\)|python3.*dist\\(netifaces\\)|python3.*dist\\(netaddr\\)|python3.*dist\\(zope.*\\)|python3.*dist\\(cffi\\)|python3.*dist\\(pycparser\\)$
+%global __requires_exclude_from ^%{python3_sitelib}/amplify/.*$
 
 %if 0%{?amzn} >= 2
 Requires: python3 >= 3.7
@@ -176,6 +176,10 @@ fi
 
 
 %changelog
+* Wed Jan 29 2025 GetPageSpeed <info@getpagespeed.com> 1.8.4-3
+- 1.8.4-3
+- Update version in all setup.py files
+
 * Wed Jan 29 2025 GetPageSpeed <info@getpagespeed.com> 1.8.4-2
 - 1.8.4-2
 - Fix RPM auto-requires filtering for bundled Python packages on EL10
