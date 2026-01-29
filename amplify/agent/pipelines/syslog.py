@@ -1,14 +1,16 @@
 """
-Asyncore implementation of a syslog interface.  Adapted from "Tiny Syslog Server in Python" (
-https://gist.github.com/marcelom/4218010) using Asyncore (https://docs.python.org/2/library/asyncore.html).  Some
-inspiration for asyncore implementation derived from pymotw (https://pymotw.com/2/asyncore/).
+Syslog interface using selectors module (Python 3.4+).
 
-SyslogTail spawns coroutine which in turns spawns an asyncore implemented syslog server and handler/cache and returns
-the received messages when iterated.
+Replaces the deprecated asyncore implementation that was removed in Python 3.12.
+Adapted from "Tiny Syslog Server in Python" (https://gist.github.com/marcelom/4218010).
+
+SyslogTail spawns a greenlet which runs a UDP syslog server and caches received
+messages, returning them when iterated.
 """
+
 # -*- coding: utf-8 -*-
 import copy
-import asyncore
+import selectors
 import socket
 from collections import deque
 
@@ -25,8 +27,8 @@ from amplify.agent.pipelines.abstract import Pipeline
 __author__ = "Grant Hulegaard"
 __copyright__ = "Copyright (C) Nginx, Inc. All rights reserved."
 __license__ = ""
-__maintainer__ = "Grant Hulegaard"
-__email__ = "grant.hulegaard@nginx.com"
+__maintainer__ = "GetPageSpeed"
+__email__ = "info@getpagespeed.com"
 
 
 SYSLOG_ADDRESSES = set()
@@ -36,50 +38,104 @@ class AmplifyAddresssAlreadyInUse(AmplifyException):
     description = "Couldn't start socket listener because address already in use"
 
 
-class SyslogServer(asyncore.dispatcher):
-    """Simple socket server that creates a socket and listens for and caches UDP packets"""
+class SyslogServer:
+    """Simple UDP socket server that listens for and caches syslog packets."""
 
     def __init__(self, cache, address, chunk_size=8192):
-        # Explicitly passed shared cache object
+        """Initialize the syslog server.
+
+        Args:
+            cache: Shared deque object to store received messages.
+            address: Tuple of (host, port) to bind to.
+            chunk_size: Maximum size of UDP packets to receive.
+        """
         self.cache = cache
-
-        # Custom constants
         self.chunk_size = chunk_size
+        self._closed = False
 
-        # Old-style class super
-        asyncore.dispatcher.__init__(self)
-
-        # asyncore server init
-        self.create_socket(socket.AF_INET, socket.SOCK_DGRAM)  # asyncore socket wrapper
-        self.bind(address)  # bind afore wrapped socket to address
-        self.address = self.socket.getsockname()  # use socket api to retrieve address (address we actually bound to)
+        # Create and bind UDP socket
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.socket.setblocking(False)
+        self.socket.bind(address)
+        self.address = self.socket.getsockname()
         SYSLOG_ADDRESSES.add(self.address)
-        context.log.debug('syslog server binding to %s' % str(self.address))
+        context.log.debug(f"syslog server binding to {str(self.address)}")
 
-    def handle_read(self):
-        """Called when a read event happens on the socket"""
-        data = bytes.decode(self.recv(self.chunk_size).strip())
+        # Create selector for non-blocking I/O
+        self.selector = selectors.DefaultSelector()
+        self.selector.register(self.socket, selectors.EVENT_READ, self._handle_read)
+
+    def _handle_read(self):
+        """Handle incoming UDP data."""
         try:
-            log_record = data.split('amplify: ', 1)[1]  # this implicitly relies on the nginx syslog format specifically
-            self.cache.append(log_record)
+            data = self.socket.recv(self.chunk_size).strip()
+            if data:
+                decoded = data.decode("utf-8", errors="replace")
+                try:
+                    # This implicitly relies on the nginx syslog format specifically
+                    log_record = decoded.split("amplify: ", 1)[1]
+                    self.cache.append(log_record)
+                except (IndexError, Exception):
+                    context.log.error(f'error handling syslog message (address:{self.address}, message:"{decoded}")')
+                    context.log.debug("additional info:", exc_info=True)
+        except BlockingIOError:
+            pass  # No data available
         except Exception:
-            context.log.error('error handling syslog message (address:%s, message:"%s")' % (self.address, data))
-            context.log.debug('additional info:', exc_info=True)
+            context.log.debug("error receiving syslog data:", exc_info=True)
+
+    def poll(self, timeout=0.1):
+        """Poll for incoming data.
+
+        Args:
+            timeout: How long to wait for events (seconds).
+
+        Returns:
+            Number of events processed.
+        """
+        if self._closed:
+            return 0
+
+        events = self.selector.select(timeout=timeout)
+        for key, _ in events:
+            callback = key.data
+            callback()
+        return len(events)
 
     def close(self):
-        context.log.debug('syslog server closing')
-        asyncore.dispatcher.close(self)
+        """Close the server and release resources."""
+        if self._closed:
+            return
+
+        context.log.debug("syslog server closing")
+        self._closed = True
+
+        try:
+            self.selector.unregister(self.socket)
+        except (KeyError, ValueError):
+            pass
+
+        self.selector.close()
+        self.socket.close()
 
 
 class SyslogListener(AbstractManager):
-    """This is just a container to manage the SyslogServer listen/handle loop."""
-    name = 'syslog_listener'
+    """Container to manage the SyslogServer listen/handle loop."""
+
+    name = "syslog_listener"
 
     def __init__(self, cache, address, **kwargs):
-        super(SyslogListener, self).__init__(**kwargs)
+        """Initialize the listener.
+
+        Args:
+            cache: Shared deque for storing messages.
+            address: Tuple of (host, port) to bind to.
+            **kwargs: Additional arguments passed to AbstractManager.
+        """
+        super().__init__(**kwargs)
         self.server = SyslogServer(cache, address)
 
     def start(self):
+        """Start the listener loop."""
         current_thread().name = self.name
         context.setup_thread_id()
 
@@ -87,83 +143,85 @@ class SyslogListener(AbstractManager):
 
         while self.running:
             self._wait(0.1)
-            # This means that we don't increment every time a UDP message is handled, but rather every listen "period"
+            # Increment action ID every listen period
             context.inc_action_id()
-            asyncore.loop(timeout=self.interval, count=10)
-            # count is arbitrary since timeout is unreliable at breaking asyncore.loop
+            # Poll for events with timeout
+            for _ in range(10):  # Process up to 10 events per cycle
+                if not self.server.poll(timeout=self.interval / 10):
+                    break
 
     def stop(self):
+        """Stop the listener and close the server."""
         self.server.close()
         context.teardown_thread_id()
-        super(SyslogListener, self).stop()
+        super().stop()
 
 
 class SyslogTail(Pipeline):
-    """Generalized Pipeline wrapper to provide a developer API for interacting with UDP listener."""
+    """Pipeline wrapper for interacting with the UDP syslog listener."""
+
     def __init__(self, address, maxlen=10000, **kwargs):
-        super(SyslogTail, self).__init__(name='syslog:%s' % str(address))
-        self.kwargs = kwargs  # only have to record this due to new listener fail-over logic
+        """Initialize the syslog tail.
+
+        Args:
+            address: Tuple of (host, port) to listen on.
+            maxlen: Maximum number of messages to cache.
+            **kwargs: Additional arguments passed to the listener.
+        """
+        super().__init__(name=f"syslog:{str(address)}")
+        self.kwargs = kwargs
         self.maxlen = maxlen
         self.cache = deque(maxlen=self.maxlen)
-        self.address = address  # This stores the address that we were passed
+        self.address = address
         self.listener = None
         self.listener_setup_attempts = 0
         self.thread = None
 
-        # Try to start listener right away, handle the exception
+        # Try to start listener right away
         try:
             self._setup_listener(**self.kwargs)
         except AmplifyAddresssAlreadyInUse as e:
             context.log.warning(
-                'failed to start listener during syslog tail init due to "%s", will try later (attempts: %s)' % (
-                    e.__class__.__name__,
-                    self.listener_setup_attempts
-                )
+                f'failed to start listener during syslog tail init due to "{e.__class__.__name__}", will try later (attempts: {self.listener_setup_attempts})'
             )
-            context.log.debug('additional info:', exc_info=True)
+            context.log.debug("additional info:", exc_info=True)
 
         self.running = True
 
     def __iter__(self):
+        """Iterate over cached messages."""
         if not self.listener and self.listener_setup_attempts < 3:
             try:
                 self._setup_listener(**self.kwargs)
                 context.log.info(
-                    'successfully started listener during "SyslogTail.__iter__()" after %s failed attempt(s)' % (
-                        self.listener_setup_attempts
-                    )
+                    f'successfully started listener during "SyslogTail.__iter__()" after {self.listener_setup_attempts} failed attempt(s)'
                 )
-                self.listener_setup_attempts = 0  # reset attempt counter
+                self.listener_setup_attempts = 0
             except AmplifyAddresssAlreadyInUse as e:
                 if self.listener_setup_attempts < 3:
                     context.log.warning(
-                        'failed to start listener during "SyslogTail.__iter__()" due to "%s", '
-                        'will try again (attempts: %s)' % (
-                            e.__class__.__name__,
-                            self.listener_setup_attempts
-                        )
+                        f'failed to start listener during "SyslogTail.__iter__()" due to "{e.__class__.__name__}", '
+                        f"will try again (attempts: {self.listener_setup_attempts})"
                     )
-                    context.log.debug('additional info:', exc_info=True)
+                    context.log.debug("additional info:", exc_info=True)
                 else:
                     context.log.error(
-                        'failed to start listener %s times, will not try again' % self.listener_setup_attempts
+                        f"failed to start listener {self.listener_setup_attempts} times, will not try again"
                     )
-                    context.log.debug('additional info:', exc_info=True)
+                    context.log.debug("additional info:", exc_info=True)
 
         current_cache = copy.deepcopy(self.cache)
-        context.log.debug('syslog tail returned %s lines captured from %s' % (len(current_cache), self.name))
+        context.log.debug(f"syslog tail returned {len(current_cache)} lines captured from {self.name}")
         self.cache.clear()
         return iter(current_cache)
 
     def _setup_listener(self, **kwargs):
+        """Set up the syslog listener."""
         if self.address in SYSLOG_ADDRESSES:
             self.listener_setup_attempts += 1
             raise AmplifyAddresssAlreadyInUse(
-                message='cannot initialize "%s" because address is already in use' % self.name,
-                payload=dict(
-                    address=self.address,
-                    used=list(SYSLOG_ADDRESSES)
-                )
+                message=f'cannot initialize "{self.name}" because address is already in use',
+                payload=dict(address=self.address, used=list(SYSLOG_ADDRESSES)),
             )
 
         SYSLOG_ADDRESSES.add(self.address)
@@ -171,22 +229,30 @@ class SyslogTail(Pipeline):
         self.thread = spawn(self.listener.start)
 
     def stop(self):
+        """Stop the syslog tail and clean up resources."""
         if self.running:
             # Remove from used addresses
-            for address in set((self.address, self.listener.server.address)):
-                SYSLOG_ADDRESSES.remove(address)
+            addresses_to_remove = {self.address}
+            if self.listener and self.listener.server:
+                addresses_to_remove.add(self.listener.server.address)
 
-            self.listener.stop()  # Close the UDP server
-            self.thread.kill()  # Kill the greenlet
+            for address in addresses_to_remove:
+                SYSLOG_ADDRESSES.discard(address)
 
-            # Unassign variables to reduce reference count for GC
+            if self.listener:
+                self.listener.stop()
+            if self.thread:
+                self.thread.kill()
+
             self.listener = None
             self.thread = None
-
-            # For good measure clear the cache to free memory and set running variable manually to False
             self.cache.clear()
             self.running = False
-            context.log.debug('syslog tail stopped')
+            context.log.debug("syslog tail stopped")
 
     def __del__(self):
-        self.stop()
+        """Clean up on deletion."""
+        try:
+            self.stop()
+        except Exception:
+            pass  # Ignore errors during cleanup
