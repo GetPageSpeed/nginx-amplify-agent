@@ -5,9 +5,11 @@
 # Copyright (C) Nginx, Inc.
 #
 
-packages_url="https://packages.amplify.nginx.com"
+packages_url="https://packages.amplify.getpagespeed.com"
 package_name="nginx-amplify-agent"
-public_key_url="https://nginx.org/keys/nginx_signing.key"
+public_key_url_rpm="https://rpm.getpagespeed.com/RPM-GPG-KEY-GETPAGESPEED"
+public_key_url_deb="https://packages.amplify.getpagespeed.com/deb-archive-keyring.gpg"
+keyring_path="/etc/apt/keyrings/getpagespeed-amplify.gpg"
 agent_conf_path="/etc/amplify-agent"
 agent_conf_file="${agent_conf_path}/agent.conf"
 amplify_hostname=""
@@ -216,9 +218,14 @@ check_downloader() {
 add_public_key_deb() {
     printf "\033[32m ${step}. Adding public key ...\033[0m"
 
-    check_downloader && \
-    ${downloader} ${downloader_opts} ${public_key_url} | \
-    ${sudo_cmd} apt-key add - > /dev/null 2>&1
+    ${sudo_cmd} mkdir -p /etc/apt/keyrings && \
+    check_downloader
+
+    if [ "${downloader}" = "curl" ]; then
+        ${sudo_cmd} ${downloader} -fsSL ${public_key_url_deb} -o ${keyring_path}
+    else
+        ${sudo_cmd} ${downloader} -q ${public_key_url_deb} -O ${keyring_path}
+    fi
 
     if [ $? -ne 0 ]; then
         printf "\033[31m failed.\033[0m\n\n"
@@ -239,11 +246,11 @@ add_public_key_rpm() {
     fi
 
     check_downloader && \
-    ${sudo_cmd} rm -f /tmp/nginx_signing.key.$$ && \
-    ${downloader} ${downloader_opts} ${public_key_url} | \
-    tee /tmp/nginx_signing.key.$$ > /dev/null 2>&1 && \
-    ${sudo_cmd} ${rpm_key_cmd} --import /tmp/nginx_signing.key.$$ && \
-    rm -f /tmp/nginx_signing.key.$$
+    ${sudo_cmd} rm -f /tmp/getpagespeed_signing.key.$$ && \
+    ${downloader} ${downloader_opts} ${public_key_url_rpm} | \
+    tee /tmp/getpagespeed_signing.key.$$ > /dev/null 2>&1 && \
+    ${sudo_cmd} ${rpm_key_cmd} --import /tmp/getpagespeed_signing.key.$$ && \
+    rm -f /tmp/getpagespeed_signing.key.$$
 
     if [ $? -ne 0 ]; then
         printf "\033[31m failed.\033[0m\n\n"
@@ -265,9 +272,10 @@ add_repo_deb () {
     ${sudo_cmd} test -w /etc/apt/sources.list.d && \
     ${sudo_cmd} rm -f /etc/apt/sources.list.d/amplify-agent.list && \
     ${sudo_cmd} rm -f /etc/apt/sources.list.d/nginx-amplify.list && \
-    echo "deb ${packages_url}/${os}/ ${codename} amplify-agent" | \
-    ${sudo_cmd} tee /etc/apt/sources.list.d/nginx-amplify.list > /dev/null 2>&1 && \
-    ${sudo_cmd} chmod 644 /etc/apt/sources.list.d/nginx-amplify.list > /dev/null 2>&1
+    ${sudo_cmd} rm -f /etc/apt/sources.list.d/getpagespeed-amplify.list && \
+    echo "deb [signed-by=${keyring_path}] ${packages_url}/${os}/ ${codename} amplify-agent" | \
+    ${sudo_cmd} tee /etc/apt/sources.list.d/getpagespeed-amplify.list > /dev/null 2>&1 && \
+    ${sudo_cmd} chmod 644 /etc/apt/sources.list.d/getpagespeed-amplify.list > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         printf "\033[32m added.\033[0m\n"
@@ -288,9 +296,10 @@ add_repo_rpm () {
     test -d /etc/yum.repos.d && \
     ${sudo_cmd} test -w /etc/yum.repos.d && \
     ${sudo_cmd} rm -f /etc/yum.repos.d/nginx-amplify.repo && \
-    printf "[nginx-amplify]\nname=nginx amplify repo\nbaseurl=${packages_url}/${os}/${release}/\$basearch\ngpgcheck=1\nenabled=1\n" | \
-    ${sudo_cmd} tee /etc/yum.repos.d/nginx-amplify.repo > /dev/null 2>&1 && \
-    ${sudo_cmd} chmod 644 /etc/yum.repos.d/nginx-amplify.repo > /dev/null 2>&1
+    ${sudo_cmd} rm -f /etc/yum.repos.d/getpagespeed-amplify.repo && \
+    printf "[getpagespeed-amplify]\nname=GetPageSpeed Amplify repo\nbaseurl=${packages_url}/${os}/${release}/\$basearch\ngpgcheck=1\ngpgkey=${public_key_url_rpm}\nenabled=1\n" | \
+    ${sudo_cmd} tee /etc/yum.repos.d/getpagespeed-amplify.repo > /dev/null 2>&1 && \
+    ${sudo_cmd} chmod 644 /etc/yum.repos.d/getpagespeed-amplify.repo > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         printf "\033[32m added.\033[0m\n"
