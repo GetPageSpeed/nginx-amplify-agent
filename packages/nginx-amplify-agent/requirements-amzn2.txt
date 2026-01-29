@@ -1,5 +1,6 @@
 gevent>=21.8.0,<24.0
 greenlet>=2.0.0,<3.0
+zope.interface>=4.0.0,<6.0
 netifaces>=0.10.4
 netaddr>=0.8.0
 flup>=1.0.3
