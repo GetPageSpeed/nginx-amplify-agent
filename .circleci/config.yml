@@ -377,6 +377,19 @@ workflows:
           name: deploy-el9-x86_64
           requires: [build-el9-x86_64]
 
+  build-el10:
+    jobs:
+      - build-rpm:
+          context: org-global
+          dist: el10
+          name: build-el10-x86_64
+      - deploy-rpm:
+          arch: x86_64
+          context: org-global
+          dist: el10
+          name: deploy-el10-x86_64
+          requires: [build-el10-x86_64]
+
   build-amzn2:
     jobs:
       - build-rpm:
