@@ -128,7 +128,8 @@ jobs:
             if ls /output/*.rpm 1> /dev/null 2>&1; then
               echo "RPM files found. Proceeding with persistence to workspace."
             else
-              echo "No RPM files found. Halting this job only."
+              echo "No RPM files found. Halting the job."
+              curl --request POST --url https://circleci.com/api/v2/workflow/$CIRCLE_WORKFLOW_ID/cancel --header "Circle-Token: ${CIRCLE_TOKEN}"
               circleci-agent step halt
             fi
       - persist_to_workspace:
@@ -282,12 +283,14 @@ jobs:
             cp ../*.deb /output/ 2>/dev/null || echo "No .deb files to copy"
             ls -la /output/
       - run:
-          name: "Check for DEB files"
+          name: "Check for DEB files and halt if none exist"
           command: |
             if ls /output/*.deb 1> /dev/null 2>&1; then
-              echo "DEB files found. Proceeding."
+              echo "DEB files found. Proceeding with persistence to workspace."
+              ls -al /output/*.deb || true
             else
-              echo "No DEB files found. Halting."
+              echo "No DEB files found. Halting the job."
+              curl --request POST --url https://circleci.com/api/v2/workflow/$CIRCLE_WORKFLOW_ID/cancel --header "Circle-Token: ${CIRCLE_TOKEN}"
               circleci-agent step halt
             fi
       - persist_to_workspace:
