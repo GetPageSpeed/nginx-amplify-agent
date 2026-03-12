@@ -40,8 +40,7 @@ Requires: python3-requests
 %if 0%{?rhel} >= 9
 Requires: python3 >= 3.9
 Requires: python3-requests
-Requires: python3-psutil
-# netifaces is bundled since it's not available on EL10+
+# netifaces and psutil are bundled via pip install --target
 %endif
 
 Requires: initscripts >= 8.36
