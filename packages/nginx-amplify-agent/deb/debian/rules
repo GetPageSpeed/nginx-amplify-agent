@@ -21,6 +21,9 @@ override_dh_installinit:
 override_dh_installsystemd:
 	dh_installsystemd -pnginx-amplify-agent --name=amplify-agent --no-start amplify-agent.service
 
+override_dh_builddeb:
+	dh_builddeb -- -Zxz
+
 override_dh_auto_test:
 	# Skip tests
 
