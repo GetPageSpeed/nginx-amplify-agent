@@ -33,28 +33,22 @@ jobs:
           docker exec agent-test systemctl --no-pager status || true
 
       - name: Install curl
-        run: |
-          docker exec agent-test bash -c "
-            apt-get update && apt-get install -y curl
-          "
+        run: docker exec agent-test bash -c 'apt-get update && apt-get install -y curl'
 
       - name: Run install.sh
         run: |
-          docker exec agent-test bash -c "
-            export API_KEY='${{ secrets.AMPLIFY_TEST_API_KEY }}'
-            curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y
-          "
+          docker exec -e API_KEY="${{ secrets.AMPLIFY_TEST_API_KEY }}" agent-test \
+            bash -c 'curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y'
 
       - name: Verify agent is running
         run: |
           # Give agent time to start and send first update
           sleep 10
-          docker exec agent-test bash -c "
-            systemctl is-active amplify-agent
-            pgrep -f nginx-amplify-agent
-            # Check log for successful server communication (200 response)
-            grep -q 'post.*200' /var/log/amplify-agent/agent.log && echo 'Agent communicating with server OK' || echo 'WARNING: No successful server communication yet'
-          "
+          docker exec agent-test systemctl is-active amplify-agent
+          docker exec agent-test pgrep -f nginx-amplify-agent
+          # Check log for successful server communication (200 response)
+          docker exec agent-test bash -c \
+            'grep -q "post.*200" /var/log/amplify-agent/agent.log && echo "Agent communicating with server OK" || echo "WARNING: No successful server communication yet"'
 
       - name: Show agent log on failure
         if: failure()
@@ -78,35 +72,43 @@ jobs:
             name: AlmaLinux 10
           - image: amazonlinux:2023
             name: Amazon Linux 2023
-            entrypoint: /usr/sbin/init
+            build_systemd: true
     name: ${{ matrix.name }}
     steps:
+      - name: Build systemd image (Amazon Linux)
+        if: matrix.build_systemd
+        run: |
+          docker build -t ${{ matrix.image }}-systemd -f - . <<'DOCKERFILE'
+          FROM ${{ matrix.image }}
+          RUN dnf install -y systemd && dnf clean all
+          CMD ["/usr/lib/systemd/systemd"]
+          DOCKERFILE
+
       - name: Start systemd container
         run: |
-          ENTRYPOINT="${{ matrix.entrypoint }}"
+          IMAGE="${{ matrix.image }}"
+          if [ "${{ matrix.build_systemd }}" = "true" ]; then
+            IMAGE="${IMAGE}-systemd"
+          fi
           docker run -d --name agent-test \
             --privileged --cgroupns=host \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-            ${ENTRYPOINT:+--entrypoint $ENTRYPOINT} \
-            ${{ matrix.image }}
+            "$IMAGE"
           sleep 3
           docker exec agent-test systemctl --no-pager status || true
 
       - name: Run install.sh
         run: |
-          docker exec agent-test bash -c "
-            export API_KEY='${{ secrets.AMPLIFY_TEST_API_KEY }}'
-            curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y
-          "
+          docker exec -e API_KEY="${{ secrets.AMPLIFY_TEST_API_KEY }}" agent-test \
+            bash -c 'curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y'
 
       - name: Verify agent is running
         run: |
           sleep 10
-          docker exec agent-test bash -c "
-            systemctl is-active amplify-agent
-            pgrep -f nginx-amplify-agent
-            grep -q 'post.*200' /var/log/amplify-agent/agent.log && echo 'Agent communicating with server OK' || echo 'WARNING: No successful server communication yet'
-          "
+          docker exec agent-test systemctl is-active amplify-agent
+          docker exec agent-test pgrep -f nginx-amplify-agent
+          docker exec agent-test bash -c \
+            'grep -q "post.*200" /var/log/amplify-agent/agent.log && echo "Agent communicating with server OK" || echo "WARNING: No successful server communication yet"'
 
       - name: Show agent log on failure
         if: failure()
