@@ -38,7 +38,7 @@ jobs:
       - name: Run install.sh
         run: |
           docker exec -e API_KEY="${{ secrets.AMPLIFY_TEST_API_KEY }}" agent-test \
-            bash -c 'curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y'
+            bash -c 'curl -sSL https://amplify.getpagespeed.com/install.sh | bash -s -- -y'
 
       - name: Verify agent is running
         run: |
@@ -100,7 +100,7 @@ jobs:
       - name: Run install.sh
         run: |
           docker exec -e API_KEY="${{ secrets.AMPLIFY_TEST_API_KEY }}" agent-test \
-            bash -c 'curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y'
+            bash -c 'curl -sSL https://amplify.getpagespeed.com/install.sh | bash -s -- -y'
 
       - name: Verify agent is running
         run: |
