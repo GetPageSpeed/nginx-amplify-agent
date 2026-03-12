@@ -7,7 +7,9 @@
 
 packages_url="https://packages.amplify.getpagespeed.com"
 package_name="nginx-amplify-agent"
-public_key_url_rpm="https://extras.getpagespeed.com/RPM-GPG-KEY-GETPAGESPEED-2023"
+public_key_url_rpm_2023="https://extras.getpagespeed.com/RPM-GPG-KEY-GETPAGESPEED-2023"
+public_key_url_rpm_legacy="https://extras.getpagespeed.com/RPM-GPG-KEY-GETPAGESPEED"
+public_key_url_rpm="${public_key_url_rpm_2023}"
 public_key_url_deb="https://packages.amplify.getpagespeed.com/deb-archive-keyring.gpg"
 keyring_path="/etc/apt/keyrings/getpagespeed-amplify.gpg"
 agent_conf_path="/etc/amplify-agent"
@@ -536,6 +538,16 @@ case "$os" in
         esac
 
         incr_step
+
+        # Use legacy GPG key for EL7/EL8 (signed with old key), 2023 key for everything else
+        case "$release" in
+            7|8)
+                public_key_url_rpm="${public_key_url_rpm_legacy}"
+                ;;
+            *)
+                public_key_url_rpm="${public_key_url_rpm_2023}"
+                ;;
+        esac
 
         # Add public key
         add_public_key_rpm
