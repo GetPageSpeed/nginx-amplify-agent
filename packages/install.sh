@@ -264,10 +264,6 @@ add_public_key_rpm() {
 add_repo_deb () {
     printf "\033[32m ${step}. Adding repository ...\033[0m"
 
-    if [ $1 -eq 3 ]; then
-        packages_url=${packages_url}/py3/
-    fi
-
     test -d /etc/apt/sources.list.d && \
     ${sudo_cmd} test -w /etc/apt/sources.list.d && \
     ${sudo_cmd} rm -f /etc/apt/sources.list.d/amplify-agent.list && \
