@@ -46,9 +46,16 @@ jobs:
           docker exec agent-test grep -q 'post.*200' /var/log/amplify-agent/agent.log
           echo 'Agent communicating with server OK'
 
-      - name: Show agent log on failure
+      - name: Show agent log and diagnostics on failure
         if: failure()
-        run: docker exec agent-test cat /var/log/amplify-agent/agent.log 2>/dev/null || true
+        run: |
+          docker exec agent-test cat /var/log/amplify-agent/agent.log 2>/dev/null || true
+          echo "--- systemctl status ---"
+          docker exec agent-test systemctl status amplify-agent --no-pager 2>/dev/null || true
+          echo "--- journalctl ---"
+          docker exec agent-test journalctl -u amplify-agent --no-pager -n 30 2>/dev/null || true
+          echo "--- try manual import ---"
+          docker exec agent-test python3 -c 'import amplify.agent.supervisor' 2>&1 || true
 
       - name: Cleanup
         if: always()
@@ -91,9 +98,16 @@ jobs:
           docker exec agent-test grep -q 'post.*200' /var/log/amplify-agent/agent.log
           echo 'Agent communicating with server OK'
 
-      - name: Show agent log on failure
+      - name: Show agent log and diagnostics on failure
         if: failure()
-        run: docker exec agent-test cat /var/log/amplify-agent/agent.log 2>/dev/null || true
+        run: |
+          docker exec agent-test cat /var/log/amplify-agent/agent.log 2>/dev/null || true
+          echo "--- systemctl status ---"
+          docker exec agent-test systemctl status amplify-agent --no-pager 2>/dev/null || true
+          echo "--- journalctl ---"
+          docker exec agent-test journalctl -u amplify-agent --no-pager -n 30 2>/dev/null || true
+          echo "--- try manual import ---"
+          docker exec agent-test python3 -c 'import amplify.agent.supervisor' 2>&1 || true
 
       - name: Cleanup
         if: always()
