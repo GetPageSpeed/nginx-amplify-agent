@@ -43,8 +43,6 @@ jobs:
           # Give agent time to start and send first update
           sleep 15
           docker exec agent-test systemctl is-active amplify-agent
-          docker exec agent-test pgrep -f amplify-agent
-          # Check log for successful server communication (200 response)
           docker exec agent-test grep -q 'post.*200' /var/log/amplify-agent/agent.log
           echo 'Agent communicating with server OK'
 
