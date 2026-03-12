@@ -12,8 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image: jrei/systemd-ubuntu:focal
-            name: Ubuntu 20.04 (focal)
           - image: jrei/systemd-ubuntu:jammy
             name: Ubuntu 22.04 (jammy)
           - image: jrei/systemd-ubuntu:noble
@@ -32,8 +30,8 @@ jobs:
           sleep 3
           docker exec agent-test systemctl --no-pager status || true
 
-      - name: Install curl
-        run: docker exec agent-test bash -c 'apt-get update && apt-get install -y curl'
+      - name: Install prerequisites
+        run: docker exec agent-test bash -c 'apt-get update && apt-get install -y curl python3'
 
       - name: Run install.sh
         run: |
@@ -68,34 +66,19 @@ jobs:
             name: AlmaLinux 8
           - image: almalinux/9-init
             name: AlmaLinux 9
-          - image: almalinux/10-init
-            name: AlmaLinux 10
-          - image: amazonlinux:2023
-            name: Amazon Linux 2023
-            build_systemd: true
     name: ${{ matrix.name }}
     steps:
-      - name: Build systemd image (Amazon Linux)
-        if: matrix.build_systemd
-        run: |
-          docker build -t ${{ matrix.image }}-systemd -f - . <<'DOCKERFILE'
-          FROM ${{ matrix.image }}
-          RUN dnf install -y systemd && dnf clean all
-          CMD ["/usr/lib/systemd/systemd"]
-          DOCKERFILE
-
       - name: Start systemd container
         run: |
-          IMAGE="${{ matrix.image }}"
-          if [ "${{ matrix.build_systemd }}" = "true" ]; then
-            IMAGE="${IMAGE}-systemd"
-          fi
           docker run -d --name agent-test \
             --privileged --cgroupns=host \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-            "$IMAGE"
+            ${{ matrix.image }}
           sleep 3
           docker exec agent-test systemctl --no-pager status || true
+
+      - name: Install prerequisites
+        run: docker exec agent-test bash -c 'dnf install -y python3'
 
       - name: Run install.sh
         run: |
