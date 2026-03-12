@@ -43,12 +43,12 @@ jobs:
       - name: Verify agent is running
         run: |
           # Give agent time to start and send first update
-          sleep 10
+          sleep 15
           docker exec agent-test systemctl is-active amplify-agent
-          docker exec agent-test pgrep -f nginx-amplify-agent
+          docker exec agent-test pgrep -f amplify-agent
           # Check log for successful server communication (200 response)
-          docker exec agent-test bash -c \
-            'grep -q "post.*200" /var/log/amplify-agent/agent.log && echo "Agent communicating with server OK" || echo "WARNING: No successful server communication yet"'
+          docker exec agent-test grep -q 'post.*200' /var/log/amplify-agent/agent.log
+          echo 'Agent communicating with server OK'
 
       - name: Show agent log on failure
         if: failure()
@@ -104,11 +104,11 @@ jobs:
 
       - name: Verify agent is running
         run: |
-          sleep 10
+          sleep 15
           docker exec agent-test systemctl is-active amplify-agent
-          docker exec agent-test pgrep -f nginx-amplify-agent
-          docker exec agent-test bash -c \
-            'grep -q "post.*200" /var/log/amplify-agent/agent.log && echo "Agent communicating with server OK" || echo "WARNING: No successful server communication yet"'
+          docker exec agent-test pgrep -f amplify-agent
+          docker exec agent-test grep -q 'post.*200' /var/log/amplify-agent/agent.log
+          echo 'Agent communicating with server OK'
 
       - name: Show agent log on failure
         if: failure()
