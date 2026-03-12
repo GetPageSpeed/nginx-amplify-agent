@@ -37,6 +37,11 @@ Requires: python3 >= 3.7
 Requires: python3-requests
 %endif
 
+%if 0%{?rhel} == 8
+Requires: python3 >= 3.6
+Requires: python3-requests
+%endif
+
 %if 0%{?rhel} >= 9
 Requires: python3 >= 3.9
 Requires: python3-requests
