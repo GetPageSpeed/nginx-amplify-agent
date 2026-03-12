@@ -1,0 +1,117 @@
+name: Integration Tests
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  test-deb:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: jrei/systemd-ubuntu:focal
+            name: Ubuntu 20.04 (focal)
+          - image: jrei/systemd-ubuntu:jammy
+            name: Ubuntu 22.04 (jammy)
+          - image: jrei/systemd-ubuntu:noble
+            name: Ubuntu 24.04 (noble)
+          - image: jrei/systemd-debian:bookworm
+            name: Debian 12 (bookworm)
+    name: ${{ matrix.name }}
+    steps:
+      - name: Start systemd container
+        run: |
+          docker run -d --name agent-test \
+            --privileged --cgroupns=host \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            ${{ matrix.image }}
+          # Wait for systemd to initialize
+          sleep 3
+          docker exec agent-test systemctl --no-pager status || true
+
+      - name: Install curl
+        run: |
+          docker exec agent-test bash -c "
+            apt-get update && apt-get install -y curl
+          "
+
+      - name: Run install.sh
+        run: |
+          docker exec agent-test bash -c "
+            export API_KEY='${{ secrets.AMPLIFY_TEST_API_KEY }}'
+            curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y
+          "
+
+      - name: Verify agent is running
+        run: |
+          # Give agent time to start and send first update
+          sleep 10
+          docker exec agent-test bash -c "
+            systemctl is-active amplify-agent
+            pgrep -f nginx-amplify-agent
+            # Check log for successful server communication (200 response)
+            grep -q 'post.*200' /var/log/amplify-agent/agent.log && echo 'Agent communicating with server OK' || echo 'WARNING: No successful server communication yet'
+          "
+
+      - name: Show agent log on failure
+        if: failure()
+        run: docker exec agent-test cat /var/log/amplify-agent/agent.log 2>/dev/null || true
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f agent-test 2>/dev/null || true
+
+  test-rpm:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: almalinux/8-init
+            name: AlmaLinux 8
+          - image: almalinux/9-init
+            name: AlmaLinux 9
+          - image: almalinux/10-init
+            name: AlmaLinux 10
+          - image: amazonlinux:2023
+            name: Amazon Linux 2023
+            entrypoint: /usr/sbin/init
+    name: ${{ matrix.name }}
+    steps:
+      - name: Start systemd container
+        run: |
+          ENTRYPOINT="${{ matrix.entrypoint }}"
+          docker run -d --name agent-test \
+            --privileged --cgroupns=host \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+            ${ENTRYPOINT:+--entrypoint $ENTRYPOINT} \
+            ${{ matrix.image }}
+          sleep 3
+          docker exec agent-test systemctl --no-pager status || true
+
+      - name: Run install.sh
+        run: |
+          docker exec agent-test bash -c "
+            export API_KEY='${{ secrets.AMPLIFY_TEST_API_KEY }}'
+            curl -sS https://amplify.getpagespeed.com/install.sh | bash -s -- -y
+          "
+
+      - name: Verify agent is running
+        run: |
+          sleep 10
+          docker exec agent-test bash -c "
+            systemctl is-active amplify-agent
+            pgrep -f nginx-amplify-agent
+            grep -q 'post.*200' /var/log/amplify-agent/agent.log && echo 'Agent communicating with server OK' || echo 'WARNING: No successful server communication yet'
+          "
+
+      - name: Show agent log on failure
+        if: failure()
+        run: docker exec agent-test cat /var/log/amplify-agent/agent.log 2>/dev/null || true
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f agent-test 2>/dev/null || true
