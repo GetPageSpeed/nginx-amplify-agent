@@ -533,3 +533,17 @@ workflows:
           suite: debian-bookworm
           name: deploy-bookworm-amd64
           requires: [build-bookworm-amd64]
+
+  build-trixie:
+    jobs:
+      - build-deb:
+          context: org-global
+          suite: debian-trixie
+          arch: amd64
+          name: build-trixie-amd64
+      - deploy-deb:
+          arch: amd64
+          context: org-global
+          suite: debian-trixie
+          name: deploy-trixie-amd64
+          requires: [build-trixie-amd64]

@@ -18,6 +18,8 @@ jobs:
             name: Ubuntu 24.04 (noble)
           - image: jrei/systemd-debian:bookworm
             name: Debian 12 (bookworm)
+          - image: jrei/systemd-debian:trixie
+            name: Debian 13 (trixie)
     name: ${{ matrix.name }}
     steps:
       - name: Start systemd container
