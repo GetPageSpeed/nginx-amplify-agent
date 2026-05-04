@@ -64,8 +64,9 @@ Repos are managed with `reprepro` on `builder@web.getpagespeed.com`. GPG signing
    ```
 5. **Update install script**: Add codename to `packages/install.sh` supported list
 6. **Add integration test**: Add to `.github/workflows/integration-test.yml` matrix
-   - DEB images: `jrei/systemd-debian:<codename>` or `jrei/systemd-ubuntu:<codename>`
-   - RPM images: `almalinux/<ver>-init`
+   - Debian: `dokken/debian-<ver>` (multi-arch, systemd preinstalled). Avoid `jrei/systemd-debian:*` — repushed arm64-only on 2026-05-03; agent .deb is amd64, so amd64-capable image required.
+   - Ubuntu: `jrei/systemd-ubuntu:<codename>` (still publishes amd64)
+   - RPM: `almalinux/<ver>-init`
 7. **Bump version**: Increment release in `packages/version` to trigger rebuild
 8. **Push and verify**: Push to master, wait for CI, run integration tests
 
