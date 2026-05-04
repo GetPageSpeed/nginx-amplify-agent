@@ -16,9 +16,12 @@ jobs:
             name: Ubuntu 22.04 (jammy)
           - image: jrei/systemd-ubuntu:noble
             name: Ubuntu 24.04 (noble)
-          - image: jrei/systemd-debian:bookworm
+          # jrei/systemd-debian:{bookworm,trixie} were repushed arm64-only on
+          # 2026-05-03 and can't be pulled on amd64 runners. Use dokken's
+          # multi-arch systemd-enabled Debian images instead.
+          - image: dokken/debian-12
             name: Debian 12 (bookworm)
-          - image: jrei/systemd-debian:trixie
+          - image: dokken/debian-13
             name: Debian 13 (trixie)
     name: ${{ matrix.name }}
     steps:
