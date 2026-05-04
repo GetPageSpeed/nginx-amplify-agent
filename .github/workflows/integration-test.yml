@@ -7,25 +7,22 @@ on:
 
 jobs:
   test-deb:
-    runs-on: ${{ matrix.runs_on }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - image: jrei/systemd-ubuntu:jammy
             name: Ubuntu 22.04 (jammy)
-            runs_on: ubuntu-latest
           - image: jrei/systemd-ubuntu:noble
             name: Ubuntu 24.04 (noble)
-            runs_on: ubuntu-latest
-          # jrei/systemd-debian:{bookworm,trixie} are arm64-only as of 2026-05.
-          # Run these matrix rows on GitHub's free hosted ARM runner.
-          - image: jrei/systemd-debian:bookworm
+          # jrei/systemd-debian:{bookworm,trixie} were repushed arm64-only on
+          # 2026-05-03 and can't be pulled on amd64 runners. Use dokken's
+          # multi-arch systemd-enabled Debian images instead.
+          - image: dokken/debian-12
             name: Debian 12 (bookworm)
-            runs_on: ubuntu-24.04-arm
-          - image: jrei/systemd-debian:trixie
+          - image: dokken/debian-13
             name: Debian 13 (trixie)
-            runs_on: ubuntu-24.04-arm
     name: ${{ matrix.name }}
     steps:
       - name: Start systemd container
