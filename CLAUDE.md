@@ -92,6 +92,7 @@ Repos are managed with `reprepro` on `builder@web.getpagespeed.com`. GPG signing
 - NEVER commit with `--no-verify`
 - Bump `packages/version` release number when making packaging-only changes
 - Test with integration tests via GitHub Actions: `gh workflow run integration-test.yml`
+- Don't delete a remote branch (`git push origin --delete <branch>`) while CircleCI has queued pipelines for it — workers can race the deletion, fail `git checkout <sha>` with `reference is not a tree`, and email a failure notice. Wait for the pipeline to start (or cancel pending workflows manually) before deleting. Prefer `gh pr merge --squash --delete-branch` over branch-then-cherry-pick.
 
 ## Key Directories
 ```
