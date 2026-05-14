@@ -1,3 +1,12 @@
+nginx-amplify-agent (1.8.5-1) stable; urgency=low
+
+  * fix: agent now starts when agent.conf lacks the optional
+    [loggers]/[handlers]/[formatters] sections (falls back to built-in
+    logging defaults instead of crashing with KeyError: 'formatters')
+  * systemd unit Documentation URL points to amplify.getpagespeed.com/docs
+
+ -- GetPageSpeed <info@getpagespeed.com>  Thu, 14 May 2026 12:00:00 +0000
+
 nginx-amplify-agent (1.8.3-1) stable; urgency=low
 
   * migrated to the most recent daemonizing logic (PEP 3143)

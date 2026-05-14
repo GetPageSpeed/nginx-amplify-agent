@@ -1,6 +1,6 @@
 [Unit]
 Description=NGINX Amplify Agent
-Documentation=https://amplify.nginx.com/docs/
+Documentation=https://amplify.getpagespeed.com/docs
 After=network-online.target remote-fs.target nss-lookup.target
 Wants=network-online.target
 

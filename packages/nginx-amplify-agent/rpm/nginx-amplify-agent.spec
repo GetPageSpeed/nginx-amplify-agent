@@ -179,6 +179,11 @@ fi
 
 
 %changelog
+* Thu May 14 2026 GetPageSpeed <info@getpagespeed.com> 1.8.5-1
+- 1.8.5-1
+- Agent now starts when agent.conf lacks the optional [loggers]/[handlers]/[formatters] sections (falls back to built-in logging defaults)
+- systemd unit Documentation URL points to amplify.getpagespeed.com/docs
+
 * Wed Jan 29 2025 GetPageSpeed <info@getpagespeed.com> 1.8.4-3
 - 1.8.4-3
 - Update version in all setup.py files
