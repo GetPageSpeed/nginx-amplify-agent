@@ -179,6 +179,11 @@ fi
 
 
 %changelog
+* Sat May 16 2026 GetPageSpeed <info@getpagespeed.com> 1.8.5-2
+- 1.8.5-2
+- Fix TypeError in exponential_delay() on Python 3.12+ (Noble/Trixie/EL10/Fedora/SLES16)
+- Ported from upstream PR github.com/nginxinc/nginx-amplify-agent/pull/125 by @jasil1414
+
 * Thu May 14 2026 GetPageSpeed <info@getpagespeed.com> 1.8.5-1
 - 1.8.5-1
 - Agent now starts when agent.conf lacks the optional [loggers]/[handlers]/[formatters] sections (falls back to built-in logging defaults)

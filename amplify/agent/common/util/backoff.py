@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from random import randint
 
 
@@ -26,10 +25,7 @@ def exponential_delay(n):
     if n < 1:
         return 0
 
-    exponential_limit = \
-        (1.0/EXPONENTIAL_COEFFICIENT) * \
-        TIMEOUT_PERIOD * \
-        (EXPONENTIAL_COEFFICIENT ** n)
+    exponential_limit = (1.0 / EXPONENTIAL_COEFFICIENT) * TIMEOUT_PERIOD * (EXPONENTIAL_COEFFICIENT**n)
     period_size = min(exponential_limit, MAXIMUM_TIMEOUT)
 
-    return randint(0, period_size - 1)
+    return randint(0, int(period_size) - 1)
