@@ -84,12 +84,12 @@ jobs:
             sed -i "s/%%AMPLIFY_AGENT_RELEASE%%/$RELEASE/g" nginx-amplify-agent.spec
 
             # Select requirements file based on distro and copy to root
-            # Python 3.6 distros (el7, el8, sles15, amzn2) need older gevent (<24.0)
+            # Python 3.6 distros (el7, el8, amzn2) need older gevent (<24.0)
             # Python 3.9+ distros (el9, el10, fc*, sles16, amzn2023) can use modern gevent
             SOURCE_REQUIREMENTS="packages/nginx-amplify-agent/requirements.txt"
             DIST="<< parameters.dist >>"
             case "$DIST" in
-              el7|el8|sles15|amzn2)
+              el7|el8|amzn2)
                 # Python 3.6/3.7 - need older gevent
                 if [ -f "packages/nginx-amplify-agent/requirements-amzn2.txt" ]; then
                   SOURCE_REQUIREMENTS="packages/nginx-amplify-agent/requirements-amzn2.txt"
@@ -426,19 +426,6 @@ workflows:
           name: deploy-amzn2023-x86_64
           requires: [build-amzn2023-x86_64]
 
-  build-fc42:
-    jobs:
-      - build-rpm:
-          context: org-global
-          dist: fc42
-          name: build-fc42-x86_64
-      - deploy-rpm:
-          arch: x86_64
-          context: org-global
-          dist: fc42
-          name: deploy-fc42-x86_64
-          requires: [build-fc42-x86_64]
-
   build-fc43:
     jobs:
       - build-rpm:
@@ -451,19 +438,6 @@ workflows:
           dist: fc43
           name: deploy-fc43-x86_64
           requires: [build-fc43-x86_64]
-
-  build-sles15:
-    jobs:
-      - build-rpm:
-          context: org-global
-          dist: sles15
-          name: build-sles15-x86_64
-      - deploy-rpm:
-          arch: x86_64
-          context: org-global
-          dist: sles15
-          name: deploy-sles15-x86_64
-          requires: [build-sles15-x86_64]
 
   build-sles16:
     jobs:
