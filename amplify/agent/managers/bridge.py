@@ -126,12 +126,12 @@ class Bridge(AbstractManager):
                 self.http_delay = 0  # Reset HTTP delay on success
                 context.log.debug("successful update, reset http delay")
         except Exception as e:
-            if self._is_upload_timeout(e):
+            if self._is_upload_aborted(e):
                 dropped = self._collapse_metric_backlog_on_timeout()
                 if dropped:
                     context.log.warning(
                         f"bridge_manager dropped {dropped} accumulated metric snapshots after "
-                        f"upload timeout (kept most recent); link too slow for backlog"
+                        f"upload abort (kept most recent); link rejecting or too slow for backlog"
                     )
             self._post_process_payload()  # Convert lists to deques since send failed
 
@@ -220,23 +220,32 @@ class Bridge(AbstractManager):
         }
 
     @staticmethod
-    def _is_upload_timeout(e):
+    def _is_upload_aborted(e):
         """True if the exception signals the just-attempted /update/ POST
-        exceeded its time budget while uploading the request body.
+        was cut short mid-upload — whether by client-side timeout, an
+        intermediate proxy closing the slow connection, or an active
+        TCP RST from in-path DPI / firewall.
 
-        Catches both the clean client-side ``requests.exceptions.ReadTimeout``
-        and the urllib3-wrapped form that fires when an intermediate proxy
-        (CDN / reverse-proxy) closes the slow connection: that surfaces as
-        ``requests.exceptions.ConnectionError('Connection aborted.',
-        timeout('timed out'))``. Both signals mean the same thing for our
-        purposes: drop the accumulated metric backlog so the next cycle
-        doesn't retry the same too-big payload.
+        Recognised shapes:
+
+        * ``requests.exceptions.ReadTimeout`` — Python read timeout fired.
+        * ``requests.exceptions.ConnectionError('Connection aborted.',
+          timeout('timed out'))`` — urllib3 wrapping a socket-level
+          timeout (CDN / reverse-proxy closed at its own client_body_timeout).
+        * ``requests.exceptions.ConnectionError('Connection aborted.',
+          ConnectionResetError(104, 'Connection reset by peer'))`` — TCP RST
+          arriving mid-upload, e.g. ISP-level DPI (TSPU-class) resetting
+          foreign TLS connections after a fixed window.
+
+        All three mean the same thing for our purposes: drop the accumulated
+        metric backlog so the next cycle doesn't retry the same payload that
+        the network just rejected.
         """
         if isinstance(e, ReadTimeout):
             return True
         if isinstance(e, RequestsConnectionError):
             for arg in e.args:
-                if isinstance(arg, (socket.timeout, TimeoutError)):
+                if isinstance(arg, (socket.timeout, TimeoutError, ConnectionResetError)):
                     return True
         return False
 

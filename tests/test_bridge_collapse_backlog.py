@@ -43,35 +43,43 @@ def test_collapse_keeps_only_most_recent():
     assert b.payload["metrics"] == [snaps[-1]]
 
 
-def test_is_upload_timeout_matches_read_timeout():
-    assert Bridge._is_upload_timeout(ReadTimeout("read timed out"))
+def test_is_upload_aborted_matches_read_timeout():
+    assert Bridge._is_upload_aborted(ReadTimeout("read timed out"))
 
 
-def test_is_upload_timeout_matches_connection_error_with_socket_timeout():
+def test_is_upload_aborted_matches_connection_error_with_socket_timeout():
     # Real-world shape from urllib3 when a slow upload is cut by an
     # intermediate proxy (CF / nginx client_body_timeout): the inner
     # arg is a socket.timeout instance.
     e = RequestsConnectionError("Connection aborted.", socket.timeout("timed out"))
-    assert Bridge._is_upload_timeout(e)
+    assert Bridge._is_upload_aborted(e)
 
 
-def test_is_upload_timeout_matches_connection_error_with_builtin_timeout():
+def test_is_upload_aborted_matches_connection_error_with_builtin_timeout():
     # Python 3.10+ aliases socket.timeout to TimeoutError; guard both.
     e = RequestsConnectionError("Connection aborted.", TimeoutError("timed out"))
-    assert Bridge._is_upload_timeout(e)
+    assert Bridge._is_upload_aborted(e)
 
 
-def test_is_upload_timeout_rejects_plain_connection_error():
+def test_is_upload_aborted_matches_connection_reset():
+    # In-path DPI / firewall TCP-RST after a fixed window (e.g. Russia's
+    # TSPU resetting foreign TLS) surfaces as ConnectionResetError(104, ...)
+    # wrapped in requests.exceptions.ConnectionError.
+    e = RequestsConnectionError("Connection aborted.", ConnectionResetError(104, "Connection reset by peer"))
+    assert Bridge._is_upload_aborted(e)
+
+
+def test_is_upload_aborted_rejects_plain_connection_error():
     # ConnectionError without a timeout inner arg = not an upload timeout
     # (e.g. RemoteDisconnected for non-time reasons, DNS failure).
     e = RequestsConnectionError("Connection aborted.", "RemoteDisconnected('foo')")
-    assert not Bridge._is_upload_timeout(e)
+    assert not Bridge._is_upload_aborted(e)
 
 
-def test_is_upload_timeout_rejects_http_error():
+def test_is_upload_aborted_rejects_http_error():
     # 5xx etc. go through the existing exponential-backoff path; we must
     # not conflate them with upload timeouts.
-    assert not Bridge._is_upload_timeout(HTTPError("500"))
+    assert not Bridge._is_upload_aborted(HTTPError("500"))
 
 
 def test_collapse_preserves_other_buckets():
