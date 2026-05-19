@@ -179,6 +179,18 @@ fi
 
 
 %changelog
+* Tue May 19 2026 GetPageSpeed <info@getpagespeed.com> 1.8.9-1
+- 1.8.9-1
+- install.sh self-heals a missing /etc/amplify-agent/agent.conf.default
+  after package install (yum reinstall on RPM, apt-get install --reinstall
+  --force-confmiss on DEB). Closes a customer-reported "can't find
+  /etc/amplify-agent/agent.conf.default" abort on Ubuntu 22.04 after a
+  remove + rm /etc/amplify-agent + reinstall cycle.
+- DEB-only: agent.conf.default is no longer registered as a dpkg conffile
+  (it is a build-time template for install.sh, not a user-editable config).
+  No behavior change on RPM, since the spec lists %{config_files}/* without
+  %config(noreplace).
+
 * Sat May 16 2026 GetPageSpeed <info@getpagespeed.com> 1.8.5-2
 - 1.8.5-2
 - Fix TypeError in exponential_delay() on Python 3.12+ (Noble/Trixie/EL10/Fedora/SLES16)

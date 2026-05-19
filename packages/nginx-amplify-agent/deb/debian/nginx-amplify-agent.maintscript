@@ -1,0 +1,1 @@
+rm_conffile /etc/amplify-agent/agent.conf.default 1.8.9-1~

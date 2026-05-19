@@ -1,3 +1,25 @@
+nginx-amplify-agent (1.8.9-1) stable; urgency=low
+
+  * fix(deb): stop shipping /etc/amplify-agent/agent.conf.default as a
+    dpkg conffile. dh_installdeb's auto-registration of /etc/ files
+    marked the build-time template as a tracked conffile in <=1.8.8-1,
+    so a customer doing `apt-get remove nginx-amplify-agent` (without
+    --purge) + `rm -rf /etc/amplify-agent` + reinstall left the template
+    missing -- and install.sh then aborted with
+    "can't find /etc/amplify-agent/agent.conf.default". Now listed
+    explicitly via debian/nginx-amplify-agent.conffiles (init.d +
+    logrotate.d only); legacy installs have the conffile retired on
+    upgrade via debian/nginx-amplify-agent.maintscript (rm_conffile).
+    Reported by an Ubuntu 22.04 customer on 2026-05-19.
+  * fix(install.sh): self-heal a missing agent.conf.default after
+    package install -- DEB: `apt-get install --reinstall
+    -o Dpkg::Options::="--force-confmiss"`; RPM: `<pkg-mgr> reinstall`.
+    Closes the same customer's "can't find" path even on hosts still
+    on the older 1.8.8-1 package, since install.sh is fetched live
+    from amplify.getpagespeed.com on every run.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Tue, 19 May 2026 00:00:00 +0000
+
 nginx-amplify-agent (1.8.5-2) stable; urgency=low
 
   * fix: cast period_size to int in exponential_delay() so HTTP retry
