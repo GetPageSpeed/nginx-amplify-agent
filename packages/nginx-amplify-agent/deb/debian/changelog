@@ -1,3 +1,33 @@
+nginx-amplify-agent (1.8.10-1) stable; urgency=low
+
+  * fix(deb,rules): override_dh_installdeb strips
+    /etc/amplify-agent/agent.conf.default from the auto-detected
+    conffiles list -- it is a build-time template for install.sh,
+    not a user-editable config. The 1.8.9-1 attempt used
+    debian/nginx-amplify-agent.conffiles, but per dh_installdeb that
+    file APPENDS to auto-detection rather than replacing it (verified
+    by extracting the built 1.8.9-1 deb -- agent.conf.default was
+    still flagged as a conffile). Legacy installs are migrated via
+    debian/nginx-amplify-agent.maintscript (rm_conffile).
+  * fix(deb): postinst no longer early-exits when agent.conf is missing
+    on the upgrade branch ($1=configure, $2=<old-version>). The early
+    `exit 0` skipped the dh_installsystemd-injected unmask, so a
+    service masked by `apt-get remove` stayed masked through reinstall
+    and install.sh's "Launching amplify-agent" step failed. Now the
+    api_url / phpfpm rewrite block is just gated on the file existing;
+    dh sections always run.
+  * revert(install.sh): drop the 1.8.9-1 self-heal branch
+    (apt-get install --reinstall --force-confmiss). It is redundant
+    once 1.8.10-1 is published, because install.sh installs `nginx-
+    amplify-agent` without a version pin -- apt picks up 1.8.10-1, the
+    maintscript retires the conffile registration during the upgrade,
+    and agent.conf.default is restored as a regular file by the
+    package itself.
+  * Verified end-to-end via the test-deb-reinstall-recovery matrix on
+    jammy/noble/bookworm/trixie.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Tue, 19 May 2026 17:00:00 +0000
+
 nginx-amplify-agent (1.8.9-1) stable; urgency=low
 
   * fix(deb): stop shipping /etc/amplify-agent/agent.conf.default as a

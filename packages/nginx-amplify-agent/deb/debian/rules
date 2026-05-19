@@ -21,6 +21,19 @@ override_dh_installinit:
 override_dh_installsystemd:
 	dh_installsystemd -pnginx-amplify-agent --name=amplify-agent --no-start amplify-agent.service
 
+# /etc/amplify-agent/agent.conf.default is a build-time template consumed by
+# install.sh (sed'd into /etc/amplify-agent/agent.conf), not a user-editable
+# config. dh_installdeb auto-registers every file under /etc/ as a dpkg
+# conffile, which causes install.sh to fail with "can't find
+# /etc/amplify-agent/agent.conf.default" after a remove + rm + reinstall
+# cycle. Strip the auto-registration here; legacy installs are migrated
+# via debian/nginx-amplify-agent.maintscript (rm_conffile).
+override_dh_installdeb:
+	dh_installdeb
+	if [ -f $(INSTALLDIR)/DEBIAN/conffiles ]; then \
+		sed -i '\|^/etc/amplify-agent/agent.conf.default$$|d' $(INSTALLDIR)/DEBIAN/conffiles; \
+	fi
+
 override_dh_builddeb:
 	dh_builddeb -- -Zxz
 

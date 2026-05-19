@@ -602,25 +602,6 @@ incr_step
 # Build config file from template
 printf "\033[32m ${step}. Building configuration file ...\033[0m"
 
-# Recover from missing agent.conf.default. In <=1.8.8-1 DEBs the template was
-# auto-registered as a dpkg conffile (dh_installdeb's auto-detection of
-# /etc/...); a remove+rm+reinstall cycle then defeats normal apt restoration.
-# Re-run the package install with --force-confmiss (DEB) or reinstall (RPM)
-# so the next step has a template to sed over. Newer packages don't need this.
-if [ ! -f "${agent_conf_file}.default" ]; then
-    case "$os" in
-        ubuntu|debian)
-            ${sudo_cmd} apt-get install --reinstall -y \
-                -o Dpkg::Options::="--force-confmiss" ${package_name} \
-                > /dev/null 2>&1 || true
-            ;;
-        centos|rhel|amzn)
-            ${sudo_cmd} ${install_cmd%% *} reinstall ${assume_yes} ${package_name} \
-                > /dev/null 2>&1 || true
-            ;;
-    esac
-fi
-
 if [ ! -f "${agent_conf_file}.default" ]; then
     printf "\033[31m can't find ${agent_conf_file}.default\033[0m\n\n"
     exit 1

@@ -179,6 +179,23 @@ fi
 
 
 %changelog
+* Tue May 19 2026 GetPageSpeed <info@getpagespeed.com> 1.8.10-1
+- 1.8.10-1
+- (DEB-only fix, no behavior change on RPM.) Follow-up to 1.8.9-1
+  after the test-deb-reinstall-recovery integration test caught two
+  more bugs on jammy:
+  * override_dh_installdeb in debian/rules strips agent.conf.default
+    from the auto-detected conffiles list. The 1.8.9-1 attempt used a
+    .conffiles file, but that APPENDS to auto-detection rather than
+    replacing it.
+  * postinst no longer early-exits on the upgrade branch when
+    agent.conf is missing -- the early exit was skipping
+    dh_installsystemd's unmask, so a service masked by `apt-get remove`
+    stayed masked through reinstall and install.sh's "Launching" step
+    failed.
+- (Cross-distro) install.sh self-heal branch added in 1.8.9-1 has been
+  removed -- redundant once 1.8.10-1 is the latest available package.
+
 * Tue May 19 2026 GetPageSpeed <info@getpagespeed.com> 1.8.9-1
 - 1.8.9-1
 - install.sh self-heals a missing /etc/amplify-agent/agent.conf.default
