@@ -31,3 +31,8 @@ key.pub
 node.pid
 .python-version
 Pipfile*
+
+# Track only README.md; everything else (CLAUDE.md, CLAUDE.local.md,
+# notes, drafts, design docs) is treated as personal/local.
+*.md
+!README.md
