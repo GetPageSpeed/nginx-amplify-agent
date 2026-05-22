@@ -1,3 +1,25 @@
+nginx-amplify-agent (1.8.11-1) stable; urgency=low
+
+  * fix(runner): reinit gevent hub after DaemonContext fork.
+    python-daemon's DaemonContext double-forks via os.fork captured at
+    import time -- before our gevent.monkey.patch_all() ran -- so
+    gevent's auto-reinit-on-fork never fires. The child process
+    inherited a hub whose libev wakefd/eventfd were closed during fork,
+    and the supervisor's first network call raised
+    gevent.hub.LoopExit("This operation would block forever"). Now
+    call gevent.reinit() in the child immediately after DaemonContext
+    enters, before self.app.run(), to rebuild the libev hub. See
+    https://www.gevent.org/api/gevent.html#gevent.reinit
+  * Manifested at cold boot on EL7 (dense kernel FD allocation makes
+    FD reuse after fork more likely); warm restarts got scattered FDs
+    and usually escaped the race. Symptom traced from
+    web.getpagespeed.com agent.log at 2026-05-22 06:36 UTC after a
+    kernel-recovery reboot.
+  * Regression tests in tests/test_runner_reinit.py:
+    structural ordering assertion + end-to-end real-fork test.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Fri, 22 May 2026 14:00:00 +0000
+
 nginx-amplify-agent (1.8.10-1) stable; urgency=low
 
   * fix(deb,rules): override_dh_installdeb strips

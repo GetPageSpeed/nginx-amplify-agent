@@ -179,6 +179,19 @@ fi
 
 
 %changelog
+* Fri May 22 2026 GetPageSpeed <info@getpagespeed.com> 1.8.11-1
+- 1.8.11-1
+- Fix "This operation would block forever" race on EL7 cold-boot start.
+  python-daemon's DaemonContext double-forks via os.fork captured at
+  import time -- before our gevent.monkey.patch_all() ran -- so gevent's
+  auto-reinit-on-fork never fires. The child process inherited a hub
+  whose libev wakefd/eventfd were closed during fork, and the
+  supervisor's first network call raised
+  gevent.hub.LoopExit("This operation would block forever").
+  Call gevent.reinit() in the child immediately after DaemonContext
+  enters to rebuild the libev hub. Manifested at cold boot on EL7;
+  warm restarts got scattered FD numbers and usually escaped the race.
+
 * Tue May 19 2026 GetPageSpeed <info@getpagespeed.com> 1.8.10-1
 - 1.8.10-1
 - (DEB-only fix, no behavior change on RPM.) Follow-up to 1.8.9-1
