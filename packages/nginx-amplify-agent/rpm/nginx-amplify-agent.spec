@@ -179,6 +179,19 @@ fi
 
 
 %changelog
+* Thu May 28 2026 GetPageSpeed <info@getpagespeed.com> 1.8.14-1
+- 1.8.14-1
+- Close a restart-recovery hole. An uncaught exception during agent startup
+  (notably the initial talk_to_cloud raising AmplifyCriticalException when a
+  rapid restart races the cloud handshake) was logged and then let the process
+  fall off the end of run() and exit 0. systemd Restart=on-failure treats a
+  clean exit as success, so the agent stayed inactive (dead) instead of being
+  revived; a single manual start recovered it. main.run() now exits non-zero on
+  any uncaught run-time exception, so the existing on-failure net (1.8.12-1)
+  restarts it -- and the fresh process re-runs gevent.reinit() (1.8.11-1).
+- Stop two destructors (AbstractManager.__del__, FileTail.__del__) from raising
+  during garbage collection / interpreter shutdown -- a missing `running`
+  attribute and a None context.log surfaced as unraisable-exception warnings.
 * Wed May 27 2026 GetPageSpeed <info@getpagespeed.com> 1.8.13-1
 - 1.8.13-1
 - Stop the recurring "workers_io raised AccessDenied" log noise. The NGINX

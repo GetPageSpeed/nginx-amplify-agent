@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import abc
 import time
 
@@ -18,11 +17,11 @@ __email__ = "grant.hulegaard@nginx.com"
 
 def get_launchers():
     # built-in
-    launchers = ['supervisord', 'supervisorctl', 'runsv', 'supervise', 'mysqld_safe']
+    launchers = ["supervisord", "supervisorctl", "runsv", "supervise", "mysqld_safe"]
 
     # config values
     if context.app_config is not None:
-        config_launchers = context.app_config['agent'].get('launchers', launchers)
+        config_launchers = context.app_config["agent"].get("launchers", launchers)
         # support single values
         if not isinstance(launchers, list):
             config_launchers = [launchers]
@@ -45,25 +44,21 @@ def launch_method_supported(manager_type, ppid):
     :return:
     """
     if ppid not in (0, 1):
-        out, err = subp.call('ps o "ppid,command" %d' % ppid)
+        out, err = subp.call(f'ps o "ppid,command" {ppid:d}')
         # take the second line because the first is a header
         launcher_ppid, parent_command = out[1].split(None, 1)
         if not any(x in parent_command for x in get_launchers()):
-            context.log.debug(
-                'launching %s with "%s" is not currently supported' %
-                (manager_type, parent_command)
-            )
+            context.log.debug(f'launching {manager_type} with "{parent_command}" is not currently supported')
             return False
         if int(launcher_ppid) not in (0, 1):
             context.log.debug(
-                'master process for %s is being skipped because its launcher (%s) is in a container' %
-                (manager_type, parent_command)
+                f"master process for {manager_type} is being skipped because its launcher ({parent_command}) is in a container"
             )
             return False
     return True
 
 
-class AbstractManager(object):
+class AbstractManager:
     """
     A manager is an encapsulated body that is spawned by supervisor.  Every manager, regardless of encapsulated purpose
     should have a run action that will be run in a while loop in .start().
@@ -71,16 +66,17 @@ class AbstractManager(object):
     This manager object is also useful for easily encapsulating asynchronous logic.  Much of the encapsulation here
     is necessary due to our mandatory agent requirements to support Python versions as old as 2.6.
     """
-    name = 'abstract_manager'
+
+    name = "abstract_manager"
 
     def __init__(self, **kwargs):
         self.running = False
-        self.interval = float(kwargs.get('interval', 5.0))  # Run interval for manager
-        self.in_container = bool(context.app_config['credentials']['imagename'])
+        self.interval = float(kwargs.get("interval", 5.0))  # Run interval for manager
+        self.in_container = bool(context.app_config["credentials"]["imagename"])
 
     @property
     def status(self):
-        return 'running' if self.running else 'stopped'
+        return "running" if self.running else "stopped"
 
     @abc.abstractmethod
     def _run(self):
@@ -88,7 +84,7 @@ class AbstractManager(object):
         try:
             pass  # Do something here...
         except:
-            context.default_log.error('failed', exc_info=True)
+            context.default_log.error("failed", exc_info=True)
             raise
 
     @staticmethod
@@ -115,8 +111,8 @@ class AbstractManager(object):
             self.stop()
             raise e
         except Exception as e:
-            context.log.error('manager execution failed due to "%s"' % e.__class__.__name__)
-            context.log.debug('additional info:', exc_info=True)
+            context.log.error(f'manager execution failed due to "{e.__class__.__name__}"')
+            context.log.debug("additional info:", exc_info=True)
             raise e
 
     def stop(self):
@@ -125,7 +121,10 @@ class AbstractManager(object):
         self.running = False
 
     def __del__(self):
-        if self.running:
+        # Guard with getattr: a manager built via __new__ (tests) or torn down
+        # before __init__ completed has no `running` attribute, and raising in
+        # __del__ surfaces as an unraisable-exception warning during GC.
+        if getattr(self, "running", False):
             self.stop()
 
 
@@ -137,14 +136,15 @@ class ObjectManager(AbstractManager):
     Object managers should have a run action that follows the following run pattern: discover, start objects, schedule
     cloud commands.
     """
-    name = 'object_manager'
-    type = 'common'
-    types = ('common',)
+
+    name = "object_manager"
+    type = "common"
+    types = ("common",)
 
     def __init__(self, object_configs=None, **kwargs):
-        super(ObjectManager, self).__init__(**kwargs)
-        self.config = context.app_config['containers'].get(self.type) or {}
-        self.config_intervals = self.config.get('poll_intervals') or {}
+        super().__init__(**kwargs)
+        self.config = context.app_config["containers"].get(self.type) or {}
+        self.config_intervals = self.config.get("poll_intervals") or {}
         self.object_configs = object_configs if object_configs else {}
         self.objects = context.objects  # Object tank
         self.last_discover = 0
@@ -161,12 +161,11 @@ class ObjectManager(AbstractManager):
         """
         Wrapper for _discover_objects - runs discovering with period
         """
-        if time.time() > self.last_discover + (self.config_intervals.get('discover') or self.interval):
+        if time.time() > self.last_discover + (self.config_intervals.get("discover") or self.interval):
             self._discover_objects()
-        context.log.debug('%s objects: %s' % (
-            self.type,
-            [obj.definition_hash for obj in self.objects.find_all(types=self.types)]
-        ))
+        context.log.debug(
+            f"{self.type} objects: {[obj.definition_hash for obj in self.objects.find_all(types=self.types)]}"
+        )
 
     # Step 2: Start objects
     def _start_objects(self):
@@ -190,8 +189,8 @@ class ObjectManager(AbstractManager):
             self._discover()
             self._start_objects()
             self._schedule_cloud_commands()
-        except:
-            context.default_log.error('run failed', exc_info=True)
+        except Exception:
+            context.default_log.error("run failed", exc_info=True)
 
     def run(self):
         """
@@ -201,7 +200,7 @@ class ObjectManager(AbstractManager):
         self._run()
 
     def stop(self):
-        super(ObjectManager, self).stop()
+        super().stop()
         self._stop_objects()
 
     def _stop_objects(self):

@@ -1,3 +1,18 @@
+nginx-amplify-agent (1.8.14-1) stable; urgency=low
+
+  * Close a restart-recovery hole. An uncaught exception during agent startup
+    (notably the initial talk_to_cloud raising AmplifyCriticalException when a
+    rapid restart races the cloud handshake) was logged and then let the
+    process fall off the end of run() and exit 0. systemd Restart=on-failure
+    treats a clean exit as success, so the agent stayed inactive (dead) instead
+    of being revived. main.run() now exits non-zero on any uncaught run-time
+    exception, so the existing on-failure net restarts it.
+  * Stop two destructors (AbstractManager.__del__, FileTail.__del__) from
+    raising during garbage collection / interpreter shutdown, which surfaced as
+    unraisable-exception warnings.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Thu, 28 May 2026 00:10:00 +0000
+
 nginx-amplify-agent (1.8.13-1) stable; urgency=low
 
   * Stop the recurring "workers_io raised AccessDenied" log noise. The NGINX

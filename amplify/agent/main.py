@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import traceback
 import sys
 
@@ -26,7 +25,7 @@ __credits__ = [
     "Laura Greenbaum",
     "Abhimanyu Nagurkar",
     "Mani Lonkar",
-    "Chez Ramalingam"
+    "Chez Ramalingam",
 ]
 __license__ = ""
 __maintainer__ = "Mike Belov"
@@ -37,34 +36,34 @@ usage = "usage: %prog [start|stop|configtest] [options]"
 
 option_list = (
     Option(
-        '--config',
-        action='store',
-        dest='config',
-        type='string',
-        help='path to the config file',
+        "--config",
+        action="store",
+        dest="config",
+        type="string",
+        help="path to the config file",
         default=None,
     ),
     Option(
-        '--pid',
-        action='store',
-        dest='pid',
-        type='string',
-        help='path to the pid file',
+        "--pid",
+        action="store",
+        dest="pid",
+        type="string",
+        help="path to the pid file",
         default=None,
     ),
     Option(
-        '--foreground',
-        action='store_true',
-        dest='foreground',
-        help='do not daemonize, run in foreground',
+        "--foreground",
+        action="store_true",
+        dest="foreground",
+        help="do not daemonize, run in foreground",
         default=False,
     ),
     Option(
-        '--log',
-        action='store',
-        dest='log',
-        type='string',
-        help='path to the log file',
+        "--log",
+        action="store",
+        dest="log",
+        type="string",
+        help="path to the log file",
         default=None,
     ),
 )
@@ -75,6 +74,7 @@ parser = OptionParser(usage, option_list=option_list)
 
 def test_configuration_and_enviroment(*args):
     from amplify.agent.common.util import configreader
+
     return configreader.test(*args)
 
 
@@ -87,14 +87,15 @@ def run(agent_name=None):
     """
     try:
         from setproctitle import setproctitle
-        proctitle = '%s-agent' % agent_name
+
+        proctitle = f"{agent_name}-agent"
         setproctitle(proctitle)
     except ImportError:
         pass
 
     try:
         action = sys.argv[1]
-        if action not in ('start', 'stop', 'configtest', 'debug'):
+        if action not in ("start", "stop", "configtest", "debug"):
             raise IndexError
     except IndexError:
         print("Invalid action or no action supplied\n")
@@ -102,49 +103,49 @@ def run(agent_name=None):
         sys.exit(1)
 
     # check config before start
-    if action in ('configtest', 'debug', 'start'):
-        wait_for_cloud = True if action == 'start' else False
+    if action in ("configtest", "debug", "start"):
+        wait_for_cloud = True if action == "start" else False
 
-        rc = test_configuration_and_enviroment(
-            options.config,
-            options.pid,
-            wait_for_cloud,
-            agent_name
-        )
+        rc = test_configuration_and_enviroment(options.config, options.pid, wait_for_cloud, agent_name)
         print("")
 
-        if action == 'configtest' or rc:
+        if action == "configtest" or rc:
             sys.exit(rc)
 
     # setup the context
-    debug_mode = action == 'debug'
+    debug_mode = action == "debug"
     try:
         from amplify.agent.common.context import context
+
         context.setup(
-            app='agent',
+            app="agent",
             config_file=options.config,
             pid_file=options.pid,
             log_file=options.log,
             debug=debug_mode,
-            agent_name=agent_name
+            agent_name=agent_name,
         )
-    except:
+    except Exception:
         traceback.print_exc()
 
     # run the agent
     try:
         from amplify.agent.supervisor import Supervisor
-        supervisor = Supervisor(
-            foreground=options.foreground,
-            debug=debug_mode
-        )
+
+        supervisor = Supervisor(foreground=options.foreground, debug=debug_mode)
 
         if options.foreground or (debug_mode and options.log):
             supervisor.run()
         else:
             from amplify.agent.common.runner import Runner
+
             daemon_runner = Runner(supervisor)
             daemon_runner.do_action()
-    except:
-        context.default_log.error('uncaught exception during run time', exc_info=True)
+    except Exception:
+        context.default_log.error("uncaught exception during run time", exc_info=True)
         traceback.print_exc()
+        # Exit non-zero so systemd's Restart=on-failure revives the agent. An
+        # uncaught exception here (e.g. a transient initial talk_to_cloud failure
+        # during a rapid restart) used to fall off the end of run() and exit 0,
+        # which on-failure treats as a clean stop -- leaving the agent dead.
+        sys.exit(1)

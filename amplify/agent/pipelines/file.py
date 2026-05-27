@@ -29,7 +29,7 @@ class FileTail(Pipeline):
     """
 
     def __init__(self, filename):
-        super().__init__(name="file:%s" % filename)
+        super().__init__(name=f"file:{filename}")
         self.filename = filename
         self._fh = None
 
@@ -48,7 +48,10 @@ class FileTail(Pipeline):
         try:
             if self._filehandle():
                 self._fh.close()
-        except StopIteration:
+        except Exception:
+            # __del__ runs during GC / interpreter shutdown, where context.log
+            # may be None and attributes may already be gone; the destructor
+            # must never raise (it surfaces as an unraisable-exception warning).
             pass
 
     def __iter__(self):
@@ -81,7 +84,7 @@ class FileTail(Pipeline):
 
         # If tries == 2 then we know we broke out of the while above manually.
         if tries == 2:
-            context.log.error('could not check if file "%s" was rotated (maybe file was deleted?)' % self.filename)
+            context.log.error(f'could not check if file "{self.filename}" was rotated (maybe file was deleted?)')
             context.log.debug("additional info:", exc_info=True)
             raise StopIteration
 
