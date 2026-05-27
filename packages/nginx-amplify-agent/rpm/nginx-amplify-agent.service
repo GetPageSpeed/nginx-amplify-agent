@@ -9,6 +9,17 @@ Type=forking
 PIDFile=/var/run/amplify-agent/amplify-agent.pid
 ExecStart=/etc/init.d/amplify-agent start
 ExecStop=/etc/init.d/amplify-agent stop
+# Belt-and-braces for the gevent-after-fork race (the gevent.reinit() fix in
+# runner.py is the cure; this guarantees recovery if it ever misses on some
+# cold-boot FD timing). on-failure restarts on abnormal exit/signal/timeout but
+# not on a clean `systemctl stop` (SIGTERM -> clean cleanup). EL7 ships systemd
+# 219, so StartLimit* use the pre-v230 names and live in [Service]. The bounded
+# limit lets a transient boot race recover on retry yet still surfaces a
+# persistent failure (bad config) as `failed` instead of looping forever.
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=60
+StartLimitBurst=3
 
 [Install]
 WantedBy=multi-user.target

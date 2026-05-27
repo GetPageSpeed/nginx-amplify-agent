@@ -1,3 +1,17 @@
+nginx-amplify-agent (1.8.12-1) stable; urgency=low
+
+  * systemd auto-restart safety net for the cold-boot start path. The
+    gevent.reinit() fix in 1.8.11-1 is the cure for the EL7 fork race;
+    this guarantees recovery if it ever loses the race on some cold-boot
+    FD timing. Adds Restart=on-failure + RestartSec=5s to [Service] and
+    StartLimitIntervalSec=60 + StartLimitBurst=3 to [Unit] (modern
+    systemd >=v230 names; the EL7 RPM unit uses the pre-v230 [Service]
+    form). on-failure does not fight a clean `systemctl stop`; the bounded
+    limit lets a transient boot race recover on retry yet still surfaces a
+    persistent failure as `failed` instead of looping forever.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Wed, 27 May 2026 14:00:00 +0000
+
 nginx-amplify-agent (1.8.11-1) stable; urgency=low
 
   * fix(runner): reinit gevent hub after DaemonContext fork.

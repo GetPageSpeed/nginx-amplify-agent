@@ -179,6 +179,17 @@ fi
 
 
 %changelog
+* Wed May 27 2026 GetPageSpeed <info@getpagespeed.com> 1.8.12-1
+- 1.8.12-1
+- systemd auto-restart safety net for the cold-boot start path. The
+  gevent.reinit() fix in 1.8.11-1 is the cure for the EL7 fork race; this
+  guarantees recovery if it ever loses the race on some cold-boot FD timing.
+  Adds Restart=on-failure, RestartSec=5s, StartLimitInterval=60,
+  StartLimitBurst=3 to the unit (pre-v230 names in [Service] for EL7
+  systemd 219). on-failure does not fight a clean `systemctl stop`; the
+  bounded limit lets a transient boot race recover on retry yet still
+  surfaces a persistent failure as `failed` instead of looping forever.
+
 * Fri May 22 2026 GetPageSpeed <info@getpagespeed.com> 1.8.11-1
 - 1.8.11-1
 - Fix "This operation would block forever" race on EL7 cold-boot start.

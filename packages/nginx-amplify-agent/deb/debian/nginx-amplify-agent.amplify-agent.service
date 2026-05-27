@@ -3,12 +3,22 @@ Description=NGINX Amplify Agent
 Documentation=https://amplify.getpagespeed.com/docs
 After=network-online.target remote-fs.target nss-lookup.target
 Wants=network-online.target
+# Crash-loop guard for the auto-restart below. Modern systemd (>=v230, all
+# current Debian/Ubuntu) takes StartLimit* in [Unit] under these names.
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=forking
 PIDFile=/var/run/amplify-agent/amplify-agent.pid
 ExecStart=/etc/init.d/amplify-agent start
 ExecStop=/etc/init.d/amplify-agent stop
+# Belt-and-braces for the gevent-after-fork race (the gevent.reinit() fix in
+# runner.py is the cure; this guarantees recovery if it ever misses on some
+# cold-boot FD timing). on-failure restarts on abnormal exit/signal/timeout but
+# not on a clean `systemctl stop` (SIGTERM -> clean cleanup).
+Restart=on-failure
+RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
