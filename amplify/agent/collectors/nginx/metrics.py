@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import re
 import time
 
@@ -31,21 +30,23 @@ __license__ = ""
 __maintainer__ = "Mike Belov"
 __email__ = "dedm@nginx.com"
 
-STUB_RE = re.compile(r'^Active connections: (?P<connections>\d+)\s+[\w ]+\n'
-                     r'\s+(?P<accepts>\d+)'
-                     r'\s+(?P<handled>\d+)'
-                     r'\s+(?P<requests>\d+)'
-                     r'\s+Reading:\s+(?P<reading>\d+)'
-                     r'\s+Writing:\s+(?P<writing>\d+)'
-                     r'\s+Waiting:\s+(?P<waiting>\d+)')
+STUB_RE = re.compile(
+    r"^Active connections: (?P<connections>\d+)\s+[\w ]+\n"
+    r"\s+(?P<accepts>\d+)"
+    r"\s+(?P<handled>\d+)"
+    r"\s+(?P<requests>\d+)"
+    r"\s+Reading:\s+(?P<reading>\d+)"
+    r"\s+Writing:\s+(?P<writing>\d+)"
+    r"\s+Waiting:\s+(?P<waiting>\d+)"
+)
 
 
 class NginxMetricsCollector(AbstractMetricsCollector):
-    short_name = 'nginx_metrics'
-    status_metric_key = 'nginx.status'
+    short_name = "nginx_metrics"
+    status_metric_key = "nginx.status"
 
     def __init__(self, **kwargs):
-        super(NginxMetricsCollector, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.processes = [Process(pid) for pid in self.object.workers]
         self.zombies = set()
 
@@ -58,44 +59,37 @@ class NginxMetricsCollector(AbstractMetricsCollector):
             self.reloads_and_restarts_count,
         )
         if not self.in_container:
-            self.register(
-                self.workers_rlimit_nofile,
-                self.workers_io
-            )
+            self.register(self.workers_rlimit_nofile, self.workers_io)
 
     def handle_exception(self, method, exception):
         if isinstance(exception, psutil.NoSuchProcess):
-
             # Log exception
             context.log.warning(
-                'failed to collect metrics %s due to %s, object restart needed (PID: %s)' %
-                (method.__name__, exception.__class__.__name__, exception.pid)
+                f"failed to collect metrics {method.__name__} due to {exception.__class__.__name__}, object restart needed (PID: {exception.pid})"
             )
             # since the PID no longer exists, mark the object as needing restart for safety
             self.object.need_restart = True
         else:
             # Fire event warning.
             self.object.eventd.event(
-                level=WARNING,
-                message="can't obtain worker process metrics (maybe permissions?)",
-                onetime=True
+                level=WARNING, message="can't obtain worker process metrics (maybe permissions?)", onetime=True
             )
-            super(NginxMetricsCollector, self).handle_exception(method, exception)
+            super().handle_exception(method, exception)
 
     def reloads_and_restarts_count(self):
-        self.object.statsd.incr('nginx.master.reloads', self.object.reloads)
+        self.object.statsd.incr("nginx.master.reloads", self.object.reloads)
         self.object.reloads = 0
 
     def workers_count(self):
         """nginx.workers.count"""
-        self.object.statsd.gauge('nginx.workers.count', len(self.object.workers))
+        self.object.statsd.gauge("nginx.workers.count", len(self.object.workers))
 
     def handle_zombie(self, pid):
         """
         removes pid from workers list
         :param pid: zombie pid
         """
-        context.log.warning('zombie process %s found' % pid)
+        context.log.warning(f"zombie process {pid} found")
         self.zombies.add(pid)
 
     def memory_info(self):
@@ -118,9 +112,9 @@ class NginxMetricsCollector(AbstractMetricsCollector):
             except psutil.ZombieProcess:
                 self.handle_zombie(p.pid)
 
-        self.object.statsd.gauge('nginx.workers.mem.rss', rss)
-        self.object.statsd.gauge('nginx.workers.mem.vms', vms)
-        self.object.statsd.gauge('nginx.workers.mem.rss_pct', pct)
+        self.object.statsd.gauge("nginx.workers.mem.rss", rss)
+        self.object.statsd.gauge("nginx.workers.mem.vms", vms)
+        self.object.statsd.gauge("nginx.workers.mem.rss_pct", pct)
 
     def workers_fds_count(self):
         """nginx.workers.fds_count"""
@@ -132,7 +126,7 @@ class NginxMetricsCollector(AbstractMetricsCollector):
                 fds += p.num_fds()
             except psutil.ZombieProcess:
                 self.handle_zombie(p.pid)
-        self.object.statsd.incr('nginx.workers.fds_count', fds)
+        self.object.statsd.incr("nginx.workers.fds_count", fds)
 
     def workers_cpu(self):
         """
@@ -151,9 +145,9 @@ class NginxMetricsCollector(AbstractMetricsCollector):
                 worker_sys += s
             except psutil.ZombieProcess:
                 self.handle_zombie(p.pid)
-        self.object.statsd.gauge('nginx.workers.cpu.total', worker_user + worker_sys)
-        self.object.statsd.gauge('nginx.workers.cpu.user', worker_user)
-        self.object.statsd.gauge('nginx.workers.cpu.system', worker_sys)
+        self.object.statsd.gauge("nginx.workers.cpu.total", worker_user + worker_sys)
+        self.object.statsd.gauge("nginx.workers.cpu.user", worker_user)
+        self.object.statsd.gauge("nginx.workers.cpu.system", worker_sys)
 
     def global_metrics(self):
         """
@@ -163,8 +157,11 @@ class NginxMetricsCollector(AbstractMetricsCollector):
         """
         if self.object.api_enabled and self.object.api_internal_url:
             self.plus_api()
-        elif self.object.plus_status_enabled and self.object.plus_status_internal_url \
-            and self.object.status_directive_supported:
+        elif (
+            self.object.plus_status_enabled
+            and self.object.plus_status_internal_url
+            and self.object.status_directive_supported
+        ):
             self.plus_status()
         elif self.object.stub_status_enabled and self.object.stub_status_url:
             self.stub_status()
@@ -184,7 +181,7 @@ class NginxMetricsCollector(AbstractMetricsCollector):
         nginx.http.conn.dropped = ss.accepts - ss.handled ## counter
         nginx.http.conn.accepted = ss.accepts ## counter
         """
-        stub_body = ''
+        stub_body = ""
         stub = {}
         stub_time = int(time.time())
 
@@ -194,9 +191,9 @@ class NginxMetricsCollector(AbstractMetricsCollector):
         except GreenletExit:
             # we caught an exit signal in the middle of processing so raise it.
             raise
-        except:
-            context.log.error('failed to check stub_status url %s' % self.object.stub_status_url)
-            context.log.debug('additional info', exc_info=True)
+        except Exception:
+            context.log.error(f"failed to check stub_status url {self.object.stub_status_url}")
+            context.log.debug("additional info", exc_info=True)
             stub_body = None
 
         if not stub_body:
@@ -206,29 +203,29 @@ class NginxMetricsCollector(AbstractMetricsCollector):
         try:
             gre = STUB_RE.match(stub_body)
             if not gre:
-                raise AmplifyParseException(message='stub status %s' % stub_body)
-            for field in ('connections', 'accepts', 'handled', 'requests', 'reading', 'writing', 'waiting'):
+                raise AmplifyParseException(message=f"stub status {stub_body}")
+            for field in ("connections", "accepts", "handled", "requests", "reading", "writing", "waiting"):
                 stub[field] = int(gre.group(field))
         except:
-            context.log.error('failed to parse stub_status body')
+            context.log.error("failed to parse stub_status body")
             raise
 
         # store some variables for further use
-        stub['dropped'] = stub['accepts'] - stub['handled']
+        stub["dropped"] = stub["accepts"] - stub["handled"]
 
         # gauges
-        self.object.statsd.gauge('nginx.http.conn.current', stub['connections'])
-        self.object.statsd.gauge('nginx.http.conn.active', stub['connections'] - stub['waiting'])
-        self.object.statsd.gauge('nginx.http.conn.idle', stub['waiting'])
-        self.object.statsd.gauge('nginx.http.request.writing', stub['writing'])
-        self.object.statsd.gauge('nginx.http.request.reading', stub['reading'])
-        self.object.statsd.gauge('nginx.http.request.current', stub['reading'] + stub['writing'])
+        self.object.statsd.gauge("nginx.http.conn.current", stub["connections"])
+        self.object.statsd.gauge("nginx.http.conn.active", stub["connections"] - stub["waiting"])
+        self.object.statsd.gauge("nginx.http.conn.idle", stub["waiting"])
+        self.object.statsd.gauge("nginx.http.request.writing", stub["writing"])
+        self.object.statsd.gauge("nginx.http.request.reading", stub["reading"])
+        self.object.statsd.gauge("nginx.http.request.current", stub["reading"] + stub["writing"])
 
         # counters
         counted_vars = {
-            'nginx.http.request.count': 'requests',
-            'nginx.http.conn.accepted': 'accepts',
-            'nginx.http.conn.dropped': 'dropped'
+            "nginx.http.request.count": "requests",
+            "nginx.http.conn.accepted": "accepts",
+            "nginx.http.conn.dropped": "dropped",
         }
         for metric_name, stub_name in counted_vars.items():
             stamp, value = stub_time, stub[stub_name]
@@ -265,62 +262,62 @@ class NginxMetricsCollector(AbstractMetricsCollector):
             status = context.http_client.get(self.object.plus_status_internal_url, timeout=1, log=False)
 
             # modify status to move stream data up a level
-            if 'stream' in status:
-                status['streams'] = status['stream'].get('server_zones', {})
-                status['stream_upstreams'] = status['stream'].get('upstreams', {})
+            if "stream" in status:
+                status["streams"] = status["stream"].get("server_zones", {})
+                status["stream_upstreams"] = status["stream"].get("upstreams", {})
 
             # Add the status payload to plus_cache so it can be parsed by other collectors (plus objects)
             context.plus_cache.put(self.object.plus_status_internal_url, (status, stamp))
         except GreenletExit:
             raise
-        except:
-            context.log.error('failed to check plus_status url %s' % self.object.plus_status_internal_url)
-            context.log.debug('additional info', exc_info=True)
+        except Exception:
+            context.log.error(f"failed to check plus_status url {self.object.plus_status_internal_url}")
+            context.log.debug("additional info", exc_info=True)
             status = None
 
         if not status:
             return
 
-        connections = status.get('connections', {})
-        requests = status.get('requests', {})
-        ssl = status.get('ssl', {})
+        connections = status.get("connections", {})
+        requests = status.get("requests", {})
+        ssl = status.get("ssl", {})
 
         # gauges
-        self.object.statsd.gauge('nginx.http.conn.active', connections.get('active'))
-        self.object.statsd.gauge('nginx.http.conn.idle', connections.get('idle'))
-        self.object.statsd.gauge('nginx.http.conn.current', connections.get('active') + connections.get('idle'))
-        self.object.statsd.gauge('nginx.http.request.current', requests.get('current'))
+        self.object.statsd.gauge("nginx.http.conn.active", connections.get("active"))
+        self.object.statsd.gauge("nginx.http.conn.idle", connections.get("idle"))
+        self.object.statsd.gauge("nginx.http.conn.current", connections.get("active") + connections.get("idle"))
+        self.object.statsd.gauge("nginx.http.request.current", requests.get("current"))
 
         # counters
         counted_vars = {
-            'nginx.http.request.count': requests.get('total'),
-            'nginx.http.conn.accepted': connections.get('accepted'),
-            'nginx.http.conn.dropped': connections.get('dropped'),
-            'plus.http.ssl.handshakes': ssl.get('handshakes'),
-            'plus.http.ssl.failed': ssl.get('handshakes_failed'),
-            'plus.http.ssl.reuses': ssl.get('session_reuses')
+            "nginx.http.request.count": requests.get("total"),
+            "nginx.http.conn.accepted": connections.get("accepted"),
+            "nginx.http.conn.dropped": connections.get("dropped"),
+            "plus.http.ssl.handshakes": ssl.get("handshakes"),
+            "plus.http.ssl.failed": ssl.get("handshakes_failed"),
+            "plus.http.ssl.reuses": ssl.get("session_reuses"),
         }
         self.aggregate_counters(counted_vars, stamp=stamp)
 
         # aggregate plus metrics
         # caches
-        caches = status.get('caches', {})
+        caches = status.get("caches", {})
         for cache in caches.values():
             for method in status_cache.CACHE_COLLECT_INDEX:
                 method(self, cache, stamp)
 
         # status zones
-        zones = status.get('server_zones', {})
+        zones = status.get("server_zones", {})
         for zone in zones.values():
             for method in status_http_server_zone.STATUS_ZONE_COLLECT_INDEX:
                 method(self, zone, stamp)
 
         # upstreams
-        upstreams = status.get('upstreams', {})
+        upstreams = status.get("upstreams", {})
         for upstream in upstreams.values():
             # workaround for supporting old N+ format
             # http://nginx.org/en/docs/http/ngx_http_status_module.html#compatibility
-            peers = upstream['peers'] if 'peers' in upstream else upstream
+            peers = upstream["peers"] if "peers" in upstream else upstream
             for peer in peers:
                 for method in status_http_upstream.UPSTREAM_PEER_COLLECT_INDEX:
                     method(self, peer, stamp)
@@ -328,21 +325,21 @@ class NginxMetricsCollector(AbstractMetricsCollector):
                 method(self, upstream, stamp)
 
         # slabs
-        slabs = status.get('slabs', {})
+        slabs = status.get("slabs", {})
         for slab in slabs.values():
             for method in status_slab.SLAB_COLLECT_INDEX:
                 method(self, slab, stamp)
 
         # streams - server_zones of stream
-        streams = status.get('streams', {})
+        streams = status.get("streams", {})
         for stream in streams.values():
             for method in status_stream_server_zone.STREAM_COLLECT_INDEX:
                 method(self, stream, stamp)
 
         # stream upstreams - upstreams of stream
-        stream_upstreams = status.get('stream_upstreams', {})
+        stream_upstreams = status.get("stream_upstreams", {})
         for stream_upstream in stream_upstreams.values():
-            peers = stream_upstream['peers'] if 'peers' in stream_upstream else stream_upstream
+            peers = stream_upstream["peers"] if "peers" in stream_upstream else stream_upstream
             for peer in peers:
                 for method in status_stream_upstream.STREAM_UPSTREAM_PEER_COLLECT_INDEX:
                     method(self, peer, stamp)
@@ -375,14 +372,13 @@ class NginxMetricsCollector(AbstractMetricsCollector):
 
         try:
             aggregated_api_payload = traverse_plus_api(
-                location_prefix=self.object.api_internal_url,
-                root_endpoints_to_skip=self.object.api_endpoints_to_skip
+                location_prefix=self.object.api_internal_url, root_endpoints_to_skip=self.object.api_endpoints_to_skip
             )
         except GreenletExit:
             raise
-        except:
-            context.log.error('failed to check plus_api url %s' % self.object.api_internal_url)
-            context.log.debug('additional info', exc_info=True)
+        except Exception:
+            context.log.error(f"failed to check plus_api url {self.object.api_internal_url}")
+            context.log.debug("additional info", exc_info=True)
             aggregated_api_payload = None
 
         if not aggregated_api_payload:
@@ -390,62 +386,62 @@ class NginxMetricsCollector(AbstractMetricsCollector):
 
         context.plus_cache.put(self.object.api_internal_url, (aggregated_api_payload, stamp))
 
-        connections = aggregated_api_payload.get('connections', {})
-        http = aggregated_api_payload.get('http', {})
-        requests = http.get('requests', {})
-        ssl = aggregated_api_payload.get('ssl', {})
-        processes = aggregated_api_payload.get('processes', {})
-        stream = aggregated_api_payload.get('stream', {})
+        connections = aggregated_api_payload.get("connections", {})
+        http = aggregated_api_payload.get("http", {})
+        requests = http.get("requests", {})
+        ssl = aggregated_api_payload.get("ssl", {})
+        processes = aggregated_api_payload.get("processes", {})
+        stream = aggregated_api_payload.get("stream", {})
 
         # gauges
-        self.object.statsd.gauge('nginx.http.conn.active', connections.get('active'))
-        self.object.statsd.gauge('nginx.http.conn.idle', connections.get('idle'))
-        self.object.statsd.gauge('nginx.http.conn.current', connections.get('active') + connections.get('idle'))
-        self.object.statsd.gauge('nginx.http.request.current', requests.get('current'))
+        self.object.statsd.gauge("nginx.http.conn.active", connections.get("active"))
+        self.object.statsd.gauge("nginx.http.conn.idle", connections.get("idle"))
+        self.object.statsd.gauge("nginx.http.conn.current", connections.get("active") + connections.get("idle"))
+        self.object.statsd.gauge("nginx.http.request.current", requests.get("current"))
 
         # counters
         counted_vars = {
-            'nginx.http.request.count': requests.get('total'),
-            'nginx.http.conn.accepted': connections.get('accepted'),
-            'nginx.http.conn.dropped': connections.get('dropped'),
-            'plus.http.ssl.handshakes': ssl.get('handshakes'),
-            'plus.http.ssl.failed': ssl.get('handshakes_failed'),
-            'plus.http.ssl.reuses': ssl.get('session_reuses'),
-            'plus.proc.respawned' : processes.get('respawned')
+            "nginx.http.request.count": requests.get("total"),
+            "nginx.http.conn.accepted": connections.get("accepted"),
+            "nginx.http.conn.dropped": connections.get("dropped"),
+            "plus.http.ssl.handshakes": ssl.get("handshakes"),
+            "plus.http.ssl.failed": ssl.get("handshakes_failed"),
+            "plus.http.ssl.reuses": ssl.get("session_reuses"),
+            "plus.proc.respawned": processes.get("respawned"),
         }
         self.aggregate_counters(counted_vars, stamp=stamp)
 
-        caches = http.get('caches', {})
+        caches = http.get("caches", {})
         for cache in caches.values():
             for method in api_http_cache.CACHE_COLLECT_INDEX:
                 method(self, cache, stamp)
 
-        http_server_zones = http.get('server_zones', {})
+        http_server_zones = http.get("server_zones", {})
         for server_zone in http_server_zones.values():
             for method in api_http_server_zone.STATUS_ZONE_COLLECT_INDEX:
                 method(self, server_zone, stamp)
 
-        http_upstreams = http.get('upstreams', {})
+        http_upstreams = http.get("upstreams", {})
         for upstream in http_upstreams.values():
-            for peer in upstream.get('peers', []):
+            for peer in upstream.get("peers", []):
                 for method in api_http_upstream.UPSTREAM_PEER_COLLECT_INDEX:
                     method(self, peer, stamp)
             for method in api_http_upstream.UPSTREAM_COLLECT_INDEX:
                 method(self, upstream, stamp)
 
-        slabs = aggregated_api_payload.get('slabs', {})
+        slabs = aggregated_api_payload.get("slabs", {})
         for slab in slabs.values():
             for method in api_slab.SLAB_COLLECT_INDEX:
                 method(self, slab, stamp)
 
-        stream_server_zones = stream.get('server_zones', {})
+        stream_server_zones = stream.get("server_zones", {})
         for server_zone in stream_server_zones.values():
             for method in api_stream_server_zone.STREAM_COLLECT_INDEX:
                 method(self, server_zone, stamp)
 
-        stream_upstreams = stream.get('upstreams', {})
+        stream_upstreams = stream.get("upstreams", {})
         for upstream in stream_upstreams.values():
-            for peer in upstream.get('peers', []):
+            for peer in upstream.get("peers", []):
                 for method in api_stream_upstream.STREAM_UPSTREAM_PEER_COLLECT_INDEX:
                     method(self, peer, stamp)
             for method in api_stream_upstream.STREAM_UPSTREAM_COLLECT_INDEX:
@@ -468,7 +464,7 @@ class NginxMetricsCollector(AbstractMetricsCollector):
                 rlimit += p.rlimit_nofile()
             except psutil.ZombieProcess:
                 self.handle_zombie(p.pid)
-        self.object.statsd.gauge('nginx.workers.rlimit_nofile', rlimit)
+        self.object.statsd.gauge("nginx.workers.rlimit_nofile", rlimit)
 
     def workers_io(self):
         """
@@ -488,6 +484,13 @@ class NginxMetricsCollector(AbstractMetricsCollector):
                 write += io.write_bytes
             except psutil.ZombieProcess:
                 self.handle_zombie(p.pid)
+            except psutil.AccessDenied:
+                # /proc/<pid>/io is ptrace-gated (stricter than uid match), so it's
+                # unreadable for the root-owned master and even for same-user workers.
+                # Skip the inaccessible process and sum IO over the readable ones rather
+                # than aborting the whole collection cycle. NoSuchProcess is deliberately
+                # NOT caught here: handle_exception() routes it to need_restart.
+                continue
         current_stamp = int(time.time())
 
         # kilobytes!
@@ -495,7 +498,7 @@ class NginxMetricsCollector(AbstractMetricsCollector):
         write /= 1024
 
         # get deltas and store metrics
-        for metric_name, value in {'nginx.workers.io.kbs_r': read, 'nginx.workers.io.kbs_w': write}.items():
+        for metric_name, value in {"nginx.workers.io.kbs_r": read, "nginx.workers.io.kbs_w": write}.items():
             prev_stamp, prev_value = self.previous_counters.get(metric_name, (None, None))
             if isinstance(prev_value, (int, float, complex)) and prev_stamp and prev_stamp != current_stamp:
                 value_delta = value - prev_value
@@ -520,7 +523,6 @@ class GentooNginxMetricsCollector(NginxMetricsCollector):
 
 
 class FreebsdNginxMetricsCollector(NginxMetricsCollector):
-
     def workers_fds_count(self):
         """
         This doesn't work on FreeBSD

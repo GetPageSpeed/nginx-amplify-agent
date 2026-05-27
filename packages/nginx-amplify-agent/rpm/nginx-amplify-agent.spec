@@ -179,6 +179,15 @@ fi
 
 
 %changelog
+* Wed May 27 2026 GetPageSpeed <info@getpagespeed.com> 1.8.13-1
+- 1.8.13-1
+- Stop the recurring "workers_io raised AccessDenied" log noise. The NGINX
+  worker IO collector reads /proc/<pid>/io, which is ptrace-gated and
+  unreadable for the root-owned master (and even between same-user workers),
+  so io_counters() raised psutil.AccessDenied and aborted the whole collection
+  cycle, zeroing nginx.workers.io.kbs_r/kbs_w. Now skip the inaccessible
+  process and sum IO over the readable workers. NoSuchProcess still propagates
+  to the need_restart path.
 * Wed May 27 2026 GetPageSpeed <info@getpagespeed.com> 1.8.12-1
 - 1.8.12-1
 - systemd auto-restart safety net for the cold-boot start path. The
