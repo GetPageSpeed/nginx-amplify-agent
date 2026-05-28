@@ -143,7 +143,7 @@ elif [ $1 -eq 2 ] ; then
 
     # Check for an older version of the agent running
     if command -V pgrep > /dev/null 2>&1; then
-        agent_pid=`pgrep amplify-agent || true`
+        agent_pid=`pgrep -f nginx-amplify-agent.py || true`
     else
         agent_pid=`ps aux | grep -i '[a]mplify-agent' | awk '{print $2}'`
     fi
@@ -179,6 +179,14 @@ fi
 
 
 %changelog
+* Thu May 28 2026 GetPageSpeed <info@getpagespeed.com> 1.8.15-1
+- 1.8.15-1
+- Fix `yum upgrade`/`apt upgrade` not restarting the agent. The %post/postinst
+  upgrade branch detected the running agent with `pgrep amplify-agent`, which
+  matches only the process comm -- truncated by the kernel to 15 chars
+  (`nginx-amplify-a`), so the pattern `amplify-agent` never matched and the
+  stop/start was skipped, leaving old code resident. Use
+  `pgrep -f nginx-amplify-agent.py`, which matches the full process cmdline.
 * Thu May 28 2026 GetPageSpeed <info@getpagespeed.com> 1.8.14-1
 - 1.8.14-1
 - Close a restart-recovery hole. An uncaught exception during agent startup

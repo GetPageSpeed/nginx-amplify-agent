@@ -1,3 +1,14 @@
+nginx-amplify-agent (1.8.15-1) stable; urgency=low
+
+  * Fix `yum upgrade`/`apt upgrade` not restarting the agent. The %post/postinst
+    upgrade branch detected the running agent with `pgrep amplify-agent`, which
+    matches only the process comm -- truncated by the kernel to 15 chars
+    (`nginx-amplify-a`), so the pattern never matched and the stop/start was
+    skipped, leaving old code resident. Use `pgrep -f nginx-amplify-agent.py`,
+    which matches the full process cmdline.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Thu, 28 May 2026 01:49:39 +0000
+
 nginx-amplify-agent (1.8.14-1) stable; urgency=low
 
   * Close a restart-recovery hole. An uncaught exception during agent startup

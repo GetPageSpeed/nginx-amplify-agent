@@ -25,7 +25,7 @@ else
     if [ -f "${agent_conf_file}" ]; then
         # Check for an older version of the agent running
         if command -V pgrep > /dev/null 2>&1; then
-            agent_pid=`pgrep amplify-agent || true`
+            agent_pid=`pgrep -f nginx-amplify-agent.py || true`
         else
             agent_pid=`ps aux | grep -i '[a]mplify-agent' | awk '{print $2}'`
         fi
