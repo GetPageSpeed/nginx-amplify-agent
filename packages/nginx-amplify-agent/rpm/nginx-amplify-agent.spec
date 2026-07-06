@@ -37,6 +37,11 @@ Requires: python3 >= 3.7
 Requires: python3-requests
 %endif
 
+%if 0%{?rhel} == 7
+Requires: python3 >= 3.6
+Requires: python3-requests
+%endif
+
 %if 0%{?rhel} == 8
 Requires: python3 >= 3.6
 Requires: python3-requests
@@ -179,6 +184,13 @@ fi
 
 
 %changelog
+* Tue Jul  7 2026 GetPageSpeed <info@getpagespeed.com> 1.8.15-2
+- 1.8.15-2
+- Fix fresh CentOS/RHEL 7 installs from install.sh. Treat EL7 as a Python 3
+  platform so the repo config points at the live /py3/ RPM repository, enable
+  EPEL for EL7 Python 3 dependencies, and add the missing python3-requests
+  runtime dependency for EL7.
+
 * Thu May 28 2026 GetPageSpeed <info@getpagespeed.com> 1.8.15-1
 - 1.8.15-1
 - Fix `yum upgrade`/`apt upgrade` not restarting the agent. The %post/postinst
