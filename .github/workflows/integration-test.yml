@@ -144,6 +144,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - image: dokken/centos-7
+            name: CentOS 7
           - image: almalinux/8-init
             name: AlmaLinux 8
           - image: almalinux/9-init
@@ -155,12 +157,24 @@ jobs:
           docker run -d --name agent-test \
             --privileged --cgroupns=host \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-            ${{ matrix.image }}
+            ${{ matrix.image }} /usr/sbin/init
           sleep 3
           docker exec agent-test systemctl --no-pager status || true
 
       - name: Install prerequisites
-        run: docker exec agent-test bash -c 'dnf install -y python3'
+        run: |
+          docker exec agent-test bash -c '
+            if [ -f /etc/centos-release ] && grep -q " 7\\." /etc/centos-release; then
+              sed -i "s/^mirrorlist=/#mirrorlist=/" /etc/yum.repos.d/CentOS-Base.repo
+              sed -i "s|^#baseurl=http://mirror.centos.org|baseurl=https://vault.centos.org|" /etc/yum.repos.d/CentOS-Base.repo
+            fi
+
+            if command -v dnf >/dev/null 2>&1; then
+              dnf install -y python3
+            else
+              yum install -y python3
+            fi
+          '
 
       - name: Run install.sh
         run: |

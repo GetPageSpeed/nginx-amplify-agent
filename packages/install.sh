@@ -307,6 +307,28 @@ add_repo_rpm () {
     fi
 }
 
+# Enable EPEL on EL7 for Python 3 packages not shipped by CentOS base.
+enable_epel_el7 () {
+    printf "\033[32m ${step}. Enabling EPEL repository ...\033[0m"
+
+    if rpm -q epel-release > /dev/null 2>&1; then
+        printf "\033[32m already enabled.\033[0m\n"
+        return
+    fi
+
+    epel_release_url="https://archives.fedoraproject.org/pub/archive/epel/7/x86_64/Packages/e/epel-release-7-14.noarch.rpm"
+
+    ${sudo_cmd} yum ${assume_yes} install epel-release > /dev/null 2>&1 || \
+    ${sudo_cmd} yum ${assume_yes} install "${epel_release_url}" > /dev/null 2>&1
+
+    if [ $? -eq 0 ]; then
+        printf "\033[32m enabled.\033[0m\n"
+    else
+        printf "\033[31m failed.\033[0m\n\n"
+        exit 1
+    fi
+}
+
 # Install package (either deb or rpm)
 install_deb_or_rpm() {
     # Update repo
@@ -528,7 +550,7 @@ case "$os" in
         incr_step
 
         case "$os$release" in
-            rhel8|rhel9|rhel10|centos8|centos9|centos10|amzn2|amzn2023)
+            rhel7|rhel8|rhel9|rhel10|centos7|centos8|centos9|centos10|amzn2|amzn2023)
                 check_python 3
                 python_supported=3
                 ;;
@@ -558,6 +580,13 @@ case "$os" in
         add_repo_rpm $python_supported
 
         incr_step
+
+        case "$os$release" in
+            rhel7|centos7)
+                enable_epel_el7
+                incr_step
+                ;;
+        esac
 
         # Install package
         update_cmd="yum ${assume_yes} makecache"
