@@ -37,6 +37,12 @@ Requires: python3 >= 3.7
 Requires: python3-requests
 %endif
 
+%if 0%{?rhel} == 7
+Requires: python3 >= 3.6
+# python3-requests is not in EL7 base; install.sh enables EPEL, which provides it
+Requires: python3-requests
+%endif
+
 %if 0%{?rhel} == 8
 Requires: python3 >= 3.6
 Requires: python3-requests
@@ -179,6 +185,16 @@ fi
 
 
 %changelog
+* Thu Jul 09 2026 GetPageSpeed <info@getpagespeed.com> 1.8.15-2
+- 1.8.15-2
+- Fix fresh CentOS 7 / RHEL 7 installs of the agent, which were silently broken
+  by two compounding bugs. (1) install.sh routed EL7 down the retired Python-2
+  repo path (baseurl .../centos/7/... -> HTTP 404); EL7 now uses the Python-3
+  path (.../py3/centos/7/...) like EL8+. (2) The RPM declared no runtime deps on
+  EL7, so the agent started with `ModuleNotFoundError: No module named 'requests'`.
+  Add an `%%if 0%%{?rhel} == 7` block requiring python3 + python3-requests.
+  python3-requests is not in the EL7 base repos (only in EPEL), so install.sh now
+  enables EPEL on EL7 before installing so the dependency resolves.
 * Thu May 28 2026 GetPageSpeed <info@getpagespeed.com> 1.8.15-1
 - 1.8.15-1
 - Fix `yum upgrade`/`apt upgrade` not restarting the agent. The %post/postinst

@@ -144,6 +144,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - image: dokken/centos-7
+            name: CentOS 7
           - image: almalinux/8-init
             name: AlmaLinux 8
           - image: almalinux/9-init
@@ -159,8 +161,34 @@ jobs:
           sleep 3
           docker exec agent-test systemctl --no-pager status || true
 
+      # CentOS 7 is EOL: mirror.centos.org/mirrorlist.centos.org are gone, so a
+      # stock EL7 image can't yum from base. Point it at vault (test scaffolding,
+      # not part of install.sh) so the EL7 install path is exercised at all.
+      - name: Point EL7 at vault
+        if: matrix.name == 'CentOS 7'
+        run: |
+          cat > /tmp/vault.repo <<'REPO'
+          [base]
+          name=base
+          baseurl=http://vault.centos.org/7.9.2009/os/$basearch/
+          gpgcheck=0
+          enabled=1
+          [updates]
+          name=updates
+          baseurl=http://vault.centos.org/7.9.2009/updates/$basearch/
+          gpgcheck=0
+          enabled=1
+          [extras]
+          name=extras
+          baseurl=http://vault.centos.org/7.9.2009/extras/$basearch/
+          gpgcheck=0
+          enabled=1
+          REPO
+          docker exec agent-test bash -c 'rm -f /etc/yum.repos.d/CentOS-*.repo'
+          docker cp /tmp/vault.repo agent-test:/etc/yum.repos.d/CentOS-Vault.repo
+
       - name: Install prerequisites
-        run: docker exec agent-test bash -c 'dnf install -y python3'
+        run: docker exec agent-test bash -c 'command -v dnf >/dev/null 2>&1 && dnf install -y python3 || yum install -y python3'
 
       - name: Run install.sh
         run: |
