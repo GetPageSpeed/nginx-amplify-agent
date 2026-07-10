@@ -185,6 +185,14 @@ fi
 
 
 %changelog
+* Fri Jul 10 2026 GetPageSpeed <info@getpagespeed.com> 1.8.16-1
+- 1.8.16-1
+- Agent now logs admin broadcast messages returned by the cloud. The server
+  (amplify-server, shipped 2026-06-15) already returned a `messages: []` array
+  in its CloudResponse to POST /1.4/{api_key}/agent/, but the agent parsed and
+  then silently dropped the field. supervisor.py now logs every non-empty
+  message at INFO with an `amplify message: ` prefix, so Amplify-admin
+  broadcasts are visible in /var/log/amplify-agent/agent.log.
 * Thu Jul 09 2026 GetPageSpeed <info@getpagespeed.com> 1.8.15-2
 - 1.8.15-2
 - Fix fresh CentOS 7 / RHEL 7 installs of the agent, which were silently broken

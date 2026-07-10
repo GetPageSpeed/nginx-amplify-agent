@@ -1,3 +1,14 @@
+nginx-amplify-agent (1.8.16-1) stable; urgency=low
+
+  * Agent now logs admin broadcast messages returned by the cloud. The server
+    (amplify-server, shipped 2026-06-15) already returned a `messages: []`
+    array in its CloudResponse, but the agent parsed and then silently
+    dropped the field. supervisor.py now logs every non-empty message at
+    INFO with an `amplify message: ` prefix, so Amplify-admin broadcasts are
+    visible in /var/log/amplify-agent/agent.log.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Fri, 10 Jul 2026 08:14:49 +0000
+
 nginx-amplify-agent (1.8.15-1) stable; urgency=low
 
   * Fix `yum upgrade`/`apt upgrade` not restarting the agent. The %post/postinst
