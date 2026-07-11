@@ -1,3 +1,11 @@
+nginx-amplify-agent (1.8.17-1) stable; urgency=low
+
+  * Report the EC2 instance region and availability zone alongside the
+    existing instance ID in system metadata, allowing Amplify to identify
+    cloud hosts on their detail pages.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Sat, 11 Jul 2026 12:36:34 +0000
+
 nginx-amplify-agent (1.8.16-1) stable; urgency=low
 
   * Agent now logs admin broadcast messages returned by the cloud. The server

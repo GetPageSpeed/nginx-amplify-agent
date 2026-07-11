@@ -185,6 +185,11 @@ fi
 
 
 %changelog
+* Sat Jul 11 2026 GetPageSpeed <info@getpagespeed.com> 1.8.17-1
+- 1.8.17-1
+- Report the EC2 instance region and availability zone alongside the existing
+  instance ID in system metadata, allowing Amplify to identify cloud hosts on
+  their detail pages.
 * Fri Jul 10 2026 GetPageSpeed <info@getpagespeed.com> 1.8.16-1
 - 1.8.16-1
 - Agent now logs admin broadcast messages returned by the cloud. The server
