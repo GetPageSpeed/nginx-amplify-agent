@@ -187,6 +187,12 @@ def test_each_distro_workflow_verifies_after_deploy():
     assert "python3 scripts/check-release-version.py --health-url https://amplify.getpagespeed.com/health" in config
 
 
+def test_myci_routes_to_package_workflows():
+    """Select the package CI config ahead of auxiliary GitHub workflows."""
+    assert (ROOT / ".myci/settings.yml").read_text() == "config: .circleci/config.yml\n"
+    assert (ROOT / ".circleci/config.yml").is_file()
+
+
 def test_each_distro_workflow_separates_build_and_deploy_contexts():
     """Keep publishing credentials off build and parity jobs in every distro."""
     config = (ROOT / ".circleci/config.yml").read_text()
