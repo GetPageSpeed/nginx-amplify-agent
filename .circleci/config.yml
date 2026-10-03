@@ -69,6 +69,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Verify local release version"
+          command: python3 scripts/check-release-version.py
+      - run:
           name: "Prepare spec file and sources"
           command: |
             # Copy spec file to root
@@ -129,6 +132,7 @@ jobs:
               echo "RPM files found. Proceeding with persistence to workspace."
             else
               echo "No RPM files found. Halting the job."
+              # MyCI shim rewrites this CircleCI compatibility form to workflow cancellation.
               curl --request POST --url https://circleci.com/api/v2/workflow/$CIRCLE_WORKFLOW_ID/cancel --header "Circle-Token: ${CIRCLE_TOKEN}"
               circleci-agent step halt
             fi
@@ -195,6 +199,9 @@ jobs:
       arch: << parameters.arch >>
     steps:
       - checkout
+      - run:
+          name: "Verify local release version"
+          command: python3 scripts/check-release-version.py
       - run:
           name: "Prepare DEB package sources"
           command: |
@@ -290,6 +297,7 @@ jobs:
               ls -al /output/*.deb || true
             else
               echo "No DEB files found. Halting the job."
+              # MyCI shim rewrites this CircleCI compatibility form to workflow cancellation.
               curl --request POST --url https://circleci.com/api/v2/workflow/$CIRCLE_WORKFLOW_ID/cancel --header "Circle-Token: ${CIRCLE_TOKEN}"
               circleci-agent step halt
             fi
@@ -347,177 +355,225 @@ jobs:
               $GPS_BUILD_USER@$GPS_BUILD_SERVER \
               "nohup ~/scripts/incoming-deb.sh ${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/ > ~/incoming-deb/${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/process.log 2>&1&"
 
+  verify-release-parity:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: "Verify production agent release parity"
+          command: python3 scripts/check-release-version.py --health-url https://amplify.getpagespeed.com/health
+
 workflows:
   build-el7:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: el7
           name: build-el7-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: el7
           name: deploy-el7-x86_64
           requires: [build-el7-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-el7-x86_64
+          requires: [deploy-el7-x86_64]
 
   build-el8:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: el8
           name: build-el8-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: el8
           name: deploy-el8-x86_64
           requires: [build-el8-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-el8-x86_64
+          requires: [deploy-el8-x86_64]
 
   build-el9:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: el9
           name: build-el9-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: el9
           name: deploy-el9-x86_64
           requires: [build-el9-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-el9-x86_64
+          requires: [deploy-el9-x86_64]
 
   build-el10:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: el10
           name: build-el10-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: el10
           name: deploy-el10-x86_64
           requires: [build-el10-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-el10-x86_64
+          requires: [deploy-el10-x86_64]
 
   build-amzn2:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: amzn2
           name: build-amzn2-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: amzn2
           name: deploy-amzn2-x86_64
           requires: [build-amzn2-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-amzn2-x86_64
+          requires: [deploy-amzn2-x86_64]
 
   build-amzn2023:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: amzn2023
           name: build-amzn2023-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: amzn2023
           name: deploy-amzn2023-x86_64
           requires: [build-amzn2023-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-amzn2023-x86_64
+          requires: [deploy-amzn2023-x86_64]
 
   build-fc43:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: fc43
           name: build-fc43-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: fc43
           name: deploy-fc43-x86_64
           requires: [build-fc43-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-fc43-x86_64
+          requires: [deploy-fc43-x86_64]
 
   build-sles16:
     jobs:
       - build-rpm:
-          context: org-global
+          context: build-deps
           dist: sles16
           name: build-sles16-x86_64
       - deploy-rpm:
           arch: x86_64
-          context: org-global
+          context: deploy
           dist: sles16
           name: deploy-sles16-x86_64
           requires: [build-sles16-x86_64]
+      - verify-release-parity:
+          name: verify-release-parity-sles16-x86_64
+          requires: [deploy-sles16-x86_64]
 
   build-focal:
     jobs:
       - build-deb:
-          context: org-global
+          context: build-deps
           suite: ubuntu-focal
           arch: amd64
           name: build-focal-amd64
       - deploy-deb:
           arch: amd64
-          context: org-global
+          context: deploy
           suite: ubuntu-focal
           name: deploy-focal-amd64
           requires: [build-focal-amd64]
+      - verify-release-parity:
+          name: verify-release-parity-focal-amd64
+          requires: [deploy-focal-amd64]
 
   build-jammy:
     jobs:
       - build-deb:
-          context: org-global
+          context: build-deps
           suite: ubuntu-jammy
           arch: amd64
           name: build-jammy-amd64
       - deploy-deb:
           arch: amd64
-          context: org-global
+          context: deploy
           suite: ubuntu-jammy
           name: deploy-jammy-amd64
           requires: [build-jammy-amd64]
+      - verify-release-parity:
+          name: verify-release-parity-jammy-amd64
+          requires: [deploy-jammy-amd64]
 
   build-noble:
     jobs:
       - build-deb:
-          context: org-global
+          context: build-deps
           suite: ubuntu-noble
           arch: amd64
           name: build-noble-amd64
       - deploy-deb:
           arch: amd64
-          context: org-global
+          context: deploy
           suite: ubuntu-noble
           name: deploy-noble-amd64
           requires: [build-noble-amd64]
+      - verify-release-parity:
+          name: verify-release-parity-noble-amd64
+          requires: [deploy-noble-amd64]
 
   build-bookworm:
     jobs:
       - build-deb:
-          context: org-global
+          context: build-deps
           suite: debian-bookworm
           arch: amd64
           name: build-bookworm-amd64
       - deploy-deb:
           arch: amd64
-          context: org-global
+          context: deploy
           suite: debian-bookworm
           name: deploy-bookworm-amd64
           requires: [build-bookworm-amd64]
+      - verify-release-parity:
+          name: verify-release-parity-bookworm-amd64
+          requires: [deploy-bookworm-amd64]
 
   build-trixie:
     jobs:
       - build-deb:
-          context: org-global
+          context: build-deps
           suite: debian-trixie
           arch: amd64
           name: build-trixie-amd64
       - deploy-deb:
           arch: amd64
-          context: org-global
+          context: deploy
           suite: debian-trixie
           name: deploy-trixie-amd64
           requires: [build-trixie-amd64]
+      - verify-release-parity:
+          name: verify-release-parity-trixie-amd64
+          requires: [deploy-trixie-amd64]

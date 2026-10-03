@@ -185,6 +185,11 @@ fi
 
 
 %changelog
+* Sat Oct 03 2026 GetPageSpeed <info@getpagespeed.com> 1.8.18-1
+- 1.8.18-1
+- Keep the runtime, RPM/DEB package metadata, and release version in sync.
+  Verify the release version before each package build and check production
+  health parity after each distro deploy.
 * Sat Jul 11 2026 GetPageSpeed <info@getpagespeed.com> 1.8.17-1
 - 1.8.17-1
 - Report the EC2 instance region and availability zone alongside the existing

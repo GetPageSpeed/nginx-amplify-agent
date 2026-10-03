@@ -1,3 +1,11 @@
+nginx-amplify-agent (1.8.18-1) stable; urgency=low
+
+  * Keep the runtime, RPM/DEB package metadata, and release version in sync.
+    Verify the release version before each package build and check production
+    health parity after each distro deploy.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Sat, 03 Oct 2026 17:00:18 +0000
+
 nginx-amplify-agent (1.8.17-1) stable; urgency=low
 
   * Report the EC2 instance region and availability zone alongside the
