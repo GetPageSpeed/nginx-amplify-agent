@@ -69,9 +69,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: "Verify local release version"
-          command: python3 scripts/check-release-version.py
-      - run:
           name: "Prepare spec file and sources"
           command: |
             # Copy spec file to root
@@ -355,6 +352,15 @@ jobs:
               $GPS_BUILD_USER@$GPS_BUILD_SERVER \
               "nohup ~/scripts/incoming-deb.sh ${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/ > ~/incoming-deb/${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/process.log 2>&1&"
 
+  verify-source-version:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - checkout
+      - run:
+          name: "Verify local release version"
+          command: python3 scripts/check-release-version.py
+
   verify-release-parity:
     docker:
       - image: cimg/python:3.12
@@ -367,10 +373,13 @@ jobs:
 workflows:
   build-el7:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-el7-x86_64
       - build-rpm:
           context: build-deps
           dist: el7
           name: build-el7-x86_64
+          requires: [verify-source-version-el7-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy
@@ -383,10 +392,13 @@ workflows:
 
   build-el8:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-el8-x86_64
       - build-rpm:
           context: build-deps
           dist: el8
           name: build-el8-x86_64
+          requires: [verify-source-version-el8-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy
@@ -399,10 +411,13 @@ workflows:
 
   build-el9:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-el9-x86_64
       - build-rpm:
           context: build-deps
           dist: el9
           name: build-el9-x86_64
+          requires: [verify-source-version-el9-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy
@@ -415,10 +430,13 @@ workflows:
 
   build-el10:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-el10-x86_64
       - build-rpm:
           context: build-deps
           dist: el10
           name: build-el10-x86_64
+          requires: [verify-source-version-el10-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy
@@ -431,10 +449,13 @@ workflows:
 
   build-amzn2:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-amzn2-x86_64
       - build-rpm:
           context: build-deps
           dist: amzn2
           name: build-amzn2-x86_64
+          requires: [verify-source-version-amzn2-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy
@@ -447,10 +468,13 @@ workflows:
 
   build-amzn2023:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-amzn2023-x86_64
       - build-rpm:
           context: build-deps
           dist: amzn2023
           name: build-amzn2023-x86_64
+          requires: [verify-source-version-amzn2023-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy
@@ -463,10 +487,13 @@ workflows:
 
   build-fc43:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-fc43-x86_64
       - build-rpm:
           context: build-deps
           dist: fc43
           name: build-fc43-x86_64
+          requires: [verify-source-version-fc43-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy
@@ -479,10 +506,13 @@ workflows:
 
   build-sles16:
     jobs:
+      - verify-source-version:
+          name: verify-source-version-sles16-x86_64
       - build-rpm:
           context: build-deps
           dist: sles16
           name: build-sles16-x86_64
+          requires: [verify-source-version-sles16-x86_64]
       - deploy-rpm:
           arch: x86_64
           context: deploy

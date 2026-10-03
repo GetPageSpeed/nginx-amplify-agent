@@ -209,13 +209,65 @@ def test_each_distro_workflow_separates_build_and_deploy_contexts():
         assert not re.search(r"^          context:", parity, re.MULTILINE), workflow
 
 
-def test_both_builds_check_version_before_side_effects():
-    """Run local validation immediately after checkout in both build jobs."""
+def test_rpm_workflows_preflight_source_version_without_builder_python():
+    """Gate every RPM build on a secret-free Python job outside rpmbuilder."""
     config = (ROOT / ".circleci/config.yml").read_text()
     jobs = config.split("\njobs:\n", 1)[1].split("\nworkflows:\n", 1)[0]
-    for name, following in (("build-rpm", "deploy-rpm"), ("build-deb", "deploy-deb")):
-        block = jobs.split(f"  {name}:\n", 1)[1].split(f"\n  {following}:\n", 1)[0]
-        assert re.search(
-            r"steps:\n      - checkout\n      - run:\n          name: \"Verify local release version\"\n          command: python3 scripts/check-release-version.py\n      - run:",
+    preflight = jobs.split("  verify-source-version:\n", 1)[1].split("\n  verify-release-parity:\n", 1)[0]
+    assert "image: cimg/python:3.12" in preflight
+    assert "- checkout" in preflight
+    assert "command: python3 scripts/check-release-version.py" in preflight
+    assert "context:" not in preflight
+    rpm = jobs.split("  build-rpm:\n", 1)[1].split("\n  deploy-rpm:\n", 1)[0]
+    assert "python3" not in rpm
+    assert re.search(r'steps:\n      - checkout\n      - run:\n          name: "Prepare spec file and sources"', rpm)
+
+    workflows = config.split("\nworkflows:\n", 1)[1]
+    blocks = re.findall(r"^  (build-[a-z0-9]+):\n(.*?)(?=^  build-|\Z)", workflows, re.MULTILINE | re.DOTALL)
+    rpm_blocks = [(workflow, block) for workflow, block in blocks if "      - build-rpm:" in block]
+    assert len(rpm_blocks) == 8
+    names = []
+    for workflow, block in rpm_blocks:
+        preflight_job = re.search(
+            r"^      - verify-source-version:\n          name: (verify-source-version-[a-z0-9_-]+)$",
             block,
+            re.MULTILINE,
         )
+        build = re.search(r"^      - build-rpm:\n(.*?)(?=^      - deploy-rpm:)", block, re.MULTILINE | re.DOTALL)
+        assert preflight_job and build, workflow
+        assert "          context:" not in block.split("      - build-rpm:", 1)[0], workflow
+        assert f"          requires: [{preflight_job.group(1)}]" in build.group(1), workflow
+        names.append(preflight_job.group(1))
+    assert len(names) == len(set(names))
+
+
+def test_deb_build_checks_version_before_side_effects():
+    """Keep local validation immediately after checkout in the DEB builder."""
+    config = (ROOT / ".circleci/config.yml").read_text()
+    jobs = config.split("\njobs:\n", 1)[1].split("\nworkflows:\n", 1)[0]
+    deb = jobs.split("  build-deb:\n", 1)[1].split("\n  deploy-deb:\n", 1)[0]
+    assert re.search(
+        r'steps:\n      - checkout\n      - run:\n          name: "Verify local release version"\n          command: python3 scripts/check-release-version.py\n      - run:',
+        deb,
+    )
+
+
+def test_integration_jobs_assert_installed_runtime_version():
+    """Check every published-package integration job against the release file."""
+    workflow = (ROOT / ".github/workflows/integration-test.yml").read_text()
+    jobs = re.findall(
+        r"^  (test-(?:deb|deb-reinstall-recovery|rpm)):\n(.*?)(?=^  test-|\Z)", workflow, re.MULTILINE | re.DOTALL
+    )
+    assert {name for name, _ in jobs} == {"test-deb", "test-deb-reinstall-recovery", "test-rpm"}
+    for name, block in jobs:
+        assert "    steps:\n      - uses: actions/checkout@v4\n" in block, name
+        install = "Reinstall via install.sh must succeed" if name == "test-deb-reinstall-recovery" else "Run install.sh"
+        assert block.index(f"      - name: {install}") < block.index(
+            "      - name: Verify installed agent version"
+        ), name
+        assert 'expected="$(cat packages/version)"' in block, name
+        assert (
+            "docker exec agent-test python3 -c 'from amplify.agent.common.context import Context; print(Context().version)'"
+            in block
+        ), name
+        assert 'test "$actual" = "$expected"' in block, name
