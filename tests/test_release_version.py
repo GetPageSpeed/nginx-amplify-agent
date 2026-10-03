@@ -266,8 +266,15 @@ def test_integration_jobs_assert_installed_runtime_version():
             "      - name: Verify installed agent version"
         ), name
         assert 'expected="$(cat packages/version)"' in block, name
-        assert (
-            "docker exec agent-test python3 -c 'from amplify.agent.common.context import Context; print(Context().version)'"
-            in block
-        ), name
+        if name == "test-rpm":
+            assert (
+                "docker exec agent-test python3 -c 'import sys, amplify; sys.path.insert(0, amplify.__path__[0]); "
+                "from amplify.agent.common.context import Context; print(Context().version)'" in block
+            ), name
+        else:
+            assert (
+                "docker exec agent-test python3 -c 'from amplify.agent.common.context import Context; print(Context().version)'"
+                in block
+            ), name
+            assert "sys.path.insert" not in block, name
         assert 'test "$actual" = "$expected"' in block, name

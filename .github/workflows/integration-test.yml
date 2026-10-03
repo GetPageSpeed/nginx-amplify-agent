@@ -220,7 +220,7 @@ jobs:
       - name: Verify installed agent version
         run: |
           expected="$(cat packages/version)"
-          actual="$(docker exec agent-test python3 -c 'from amplify.agent.common.context import Context; print(Context().version)')"
+          actual="$(docker exec agent-test python3 -c 'import sys, amplify; sys.path.insert(0, amplify.__path__[0]); from amplify.agent.common.context import Context; print(Context().version)')"
           echo "Expected agent version: $expected"
           echo "Installed agent version: $actual"
           test "$actual" = "$expected"
