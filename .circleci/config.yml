@@ -344,13 +344,13 @@ jobs:
                 $GPS_BUILD_USER@$GPS_BUILD_SERVER:~/incoming-deb/${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/
             fi
       - run:
-          name: "Trigger Deploy Hook."
+          name: "Publish to APT repo (acknowledged import)"
           command: |
             DISTRO="${SUITE%%-*}"
             CODENAME="${SUITE#*-}"
-            ssh -o StrictHostKeyChecking=no -q \
+            ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
               $GPS_BUILD_USER@$GPS_BUILD_SERVER \
-              "nohup ~/scripts/incoming-deb.sh ${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/ > ~/incoming-deb/${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/process.log 2>&1&"
+              "~/scripts/incoming-deb-ci.sh ${CIRCLE_PROJECT_REPONAME}/${DISTRO}/${CODENAME}/${ARCH}/${CIRCLE_BRANCH}/"
 
   verify-source-version:
     docker:
