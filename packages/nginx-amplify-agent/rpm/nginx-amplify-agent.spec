@@ -185,6 +185,13 @@ fi
 
 
 %changelog
+* Thu Oct 22 2026 GetPageSpeed <info@getpagespeed.com> 1.8.19-1
+- 1.8.19-1
+- Report the PHP-FPM binary, its `--version` line and the OS package that
+  owns it, so Amplify can tell patched backports from vulnerable builds
+  (PHP2Shell). Resolve the binary even when the root-owned master is
+  unreadable, reject non-PHP output (Python/systemd versions were reported
+  as PHP), and refresh the version after an upgrade and reload.
 * Sat Oct 03 2026 GetPageSpeed <info@getpagespeed.com> 1.8.18-1
 - 1.8.18-1
 - Keep the runtime, RPM/DEB package metadata, and release version in sync.

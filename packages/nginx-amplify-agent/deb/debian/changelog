@@ -1,3 +1,13 @@
+nginx-amplify-agent (1.8.19-1) stable; urgency=medium
+
+  * Report the PHP-FPM binary, its `--version` line and the OS package that
+    owns it, so Amplify can tell patched backports from vulnerable builds
+    (PHP2Shell). Resolve the binary even when the root-owned master is
+    unreadable, reject non-PHP output (Python/systemd versions were reported
+    as PHP), and refresh the version after an upgrade and reload.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Thu, 22 Oct 2026 08:00:00 +0000
+
 nginx-amplify-agent (1.8.18-1) stable; urgency=low
 
   * Keep the runtime, RPM/DEB package metadata, and release version in sync.

@@ -23,7 +23,7 @@ data_files = [
 
 setup(
     name="nginx-amplify-agent",
-    version="1.8.18",
+    version="1.8.19",
     author="GetPageSpeed",
     author_email="info@getpagespeed.com",
     description="GetPageSpeed Amplify Agent",

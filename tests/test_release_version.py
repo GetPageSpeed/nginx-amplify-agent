@@ -14,6 +14,11 @@ spec = importlib.util.spec_from_file_location("check_release_version", SCRIPT)
 release_check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(release_check)
 
+# Derived from the release file so a version bump never needs test edits.
+RELEASE = (ROOT / "packages/version").read_text().strip()
+UPSTREAM = RELEASE.split("-")[0]
+SEMVER_LINE = "self.version_semver = (%s)" % ", ".join(UPSTREAM.split("."))
+
 
 @pytest.fixture
 def source_root(tmp_path):
@@ -48,7 +53,7 @@ def test_rejects_invalid_package_versions(source_root, release):
 def test_rejects_runtime_version_drift(source_root):
     """Detect a runtime version that differs from the release file."""
     path = source_root / "amplify/agent/common/context.py"
-    path.write_text(path.read_text().replace("self.version_semver = (1, 8, 18)", "self.version_semver = (1, 8, 17)"))
+    path.write_text(path.read_text().replace(SEMVER_LINE, "self.version_semver = (1, 0, 0)"))
     with pytest.raises(ValueError, match="differs"):
         release_check.check_local(source_root)
 
@@ -60,7 +65,7 @@ def test_extracted_runtime_matches_source_release(source_root, tmp_path):
     context.parent.mkdir(parents=True)
     context.write_text((source_root / "amplify/agent/common/context.py").read_text())
     assert not (runtime_root / "packages/version").exists()
-    assert release_check.check_local(source_root, runtime_root) == "1.8.18"
+    assert release_check.check_local(source_root, runtime_root) == UPSTREAM
     assert release_check.main(["--source-root", str(source_root), "--runtime-root", str(runtime_root)]) == 0
 
 
@@ -72,7 +77,7 @@ def test_extracted_runtime_drift_fails(source_root, tmp_path, capsys):
     context.write_text(
         (source_root / "amplify/agent/common/context.py")
         .read_text()
-        .replace("self.version_semver = (1, 8, 18)", "self.version_semver = (1, 8, 17)")
+        .replace(SEMVER_LINE, "self.version_semver = (1, 0, 0)")
     )
     assert not (runtime_root / "packages/version").exists()
     with pytest.raises(ValueError, match="differs"):
@@ -85,7 +90,7 @@ def test_extracted_runtime_drift_fails(source_root, tmp_path, capsys):
 def test_rejects_boolean_runtime_semver(source_root, semver):
     """Reject booleans in the runtime semantic version tuple."""
     path = source_root / "amplify/agent/common/context.py"
-    path.write_text(path.read_text().replace("self.version_semver = (1, 8, 18)", f"self.version_semver = {semver}"))
+    path.write_text(path.read_text().replace(SEMVER_LINE, f"self.version_semver = {semver}"))
     with pytest.raises(ValueError, match="version_semver"):
         release_check.check_local(source_root)
 
@@ -144,7 +149,7 @@ def test_cli_reports_fetch_failures(source_root, monkeypatch, capsys, error):
 def test_cli_default_checks_local_source(capsys):
     """Run the local check without contacting a health endpoint."""
     assert release_check.main([]) == 0
-    assert "1.8.18" in capsys.readouterr().out
+    assert UPSTREAM in capsys.readouterr().out
 
 
 def test_package_metadata_matches_bare_release():
