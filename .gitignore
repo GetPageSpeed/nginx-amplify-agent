@@ -40,3 +40,5 @@ Pipfile*
 # RPM build step (.circleci/config.yml) copies these to the repo root
 /nginx-amplify-agent.spec
 /nginx-amplify-agent.service
+/setup.py
+/requirements.txt
