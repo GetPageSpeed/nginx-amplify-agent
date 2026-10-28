@@ -25,7 +25,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov
+          # setuptools: Python 3.12+ runners no longer preinstall it, and
+          # tests/test_setup_packages.py execs setup-rpm.py against it.
+          pip install pytest pytest-cov setuptools
           # Install all runtime dependencies
           pip install psutil netifaces requests netaddr gevent greenlet
           pip install rstr ujson crossplane pymysql python-daemon flup lockfile
