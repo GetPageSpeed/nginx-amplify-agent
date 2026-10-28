@@ -36,3 +36,7 @@ Pipfile*
 # notes, drafts, design docs) is treated as personal/local.
 *.md
 !README.md
+
+# RPM build step (.circleci/config.yml) copies these to the repo root
+/nginx-amplify-agent.spec
+/nginx-amplify-agent.service
