@@ -37,7 +37,7 @@ class Context(Singleton):
         # define vars
         self.cpu_last_check = 0
         self.version_semver = (1, 8, 19)
-        self.version_build = 1
+        self.version_build = 2
         self.uuid = None
         self.version = f"{'.'.join(map(str, self.version_semver))}-{self.version_build}"
         self.environment = None

@@ -35,6 +35,8 @@ setup(
             "*.test.*",
             "test.*",
             "test",
+            "tests",
+            "tests.*",
             "tools",
             "tools.*",
             "packages",

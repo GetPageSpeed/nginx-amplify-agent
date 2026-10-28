@@ -1,3 +1,10 @@
+nginx-amplify-agent (1.8.19-2) stable; urgency=medium
+
+  * Stop shipping the source tree's tests/ as a top-level site-packages
+    package (file clash with other distro packages owning tests/__init__.py).
+
+ -- GetPageSpeed <info@getpagespeed.com>  Thu, 29 Oct 2026 12:00:00 +0700
+
 nginx-amplify-agent (1.8.19-1) stable; urgency=medium
 
   * Report the PHP-FPM binary, its `--version` line and the OS package that

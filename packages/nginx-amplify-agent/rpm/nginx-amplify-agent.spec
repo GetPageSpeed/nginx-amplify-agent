@@ -185,6 +185,11 @@ fi
 
 
 %changelog
+* Thu Oct 29 2026 GetPageSpeed <info@getpagespeed.com> 1.8.19-2
+- 1.8.19-2
+- Stop shipping the source tree's tests/ as a top-level site-packages
+  package; it clashed with EPEL python36-suds and aborted yum upgrades
+
 * Thu Oct 22 2026 GetPageSpeed <info@getpagespeed.com> 1.8.19-1
 - 1.8.19-1
 - Report the PHP-FPM binary, its `--version` line and the OS package that

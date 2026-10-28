@@ -102,7 +102,7 @@ def test_rejects_boolean_runtime_semver(source_root, semver):
 def test_rejects_invalid_runtime_literal(source_root, replacement):
     """Reject missing, dynamic, and invalid runtime build values."""
     path = source_root / "amplify/agent/common/context.py"
-    path.write_text(path.read_text().replace("self.version_build = 1", replacement))
+    path.write_text(path.read_text().replace("self.version_build = %s" % RELEASE.split("-")[1], replacement))
     with pytest.raises(ValueError, match="version_build"):
         release_check.check_local(source_root)
 
