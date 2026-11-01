@@ -1,3 +1,9 @@
+nginx-amplify-agent (1.8.19-3) stable; urgency=medium
+
+  * RPM only: install on Amazon Linux 2 with EPEL enabled.
+
+ -- GetPageSpeed <info@getpagespeed.com>  Sun, 01 Nov 2026 12:00:00 +0700
+
 nginx-amplify-agent (1.8.19-2) stable; urgency=medium
 
   * Stop shipping the source tree's tests/ as a top-level site-packages

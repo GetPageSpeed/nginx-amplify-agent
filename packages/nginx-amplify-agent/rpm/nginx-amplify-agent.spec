@@ -34,10 +34,16 @@ BuildRequires: systemd-rpm-macros
 
 %if 0%{?amzn} >= 2
 Requires: python3 >= 3.7
+%if 0%{?amzn} == 2
+# With EPEL on, yum picks EPEL 7's python36-requests for python3-requests, and
+# that needs Python 3.6, which amzn2 lacks. Only amzn2's own package owns this path.
+Requires: /usr/lib/python3.7/site-packages/requests/__init__.py
+%else
 Requires: python3-requests
 %endif
+%endif
 
-%if 0%{?rhel} == 7
+%if 0%{?rhel} == 7 && 0%{?amzn} == 0
 Requires: python3 >= 3.6
 # python3-requests is not in EL7 base; install.sh enables EPEL, which provides it
 Requires: python3-requests
@@ -185,6 +191,11 @@ fi
 
 
 %changelog
+* Sun Nov 01 2026 GetPageSpeed <info@getpagespeed.com> 1.8.19-3
+- 1.8.19-3
+- Install on Amazon Linux 2 with EPEL enabled: require the Python 3.7 requests
+  package by path so yum does not pick EPEL's python36-requests
+
 * Thu Oct 29 2026 GetPageSpeed <info@getpagespeed.com> 1.8.19-2
 - 1.8.19-2
 - Stop shipping the source tree's tests/ as a top-level site-packages
