@@ -239,10 +239,11 @@ jobs:
 
             # Read version
             VERSION=$(cat packages/version | cut -d- -f1)
+            RELEASE=$(cat packages/version | cut -d- -f2)
 
             # Create changelog with version (avoiding heredoc due to CircleCI syntax)
             # Use the extracted codename (focal, bookworm) not the full suite name (ubuntu-focal)
-            echo "nginx-amplify-agent (${VERSION}-1~${SUITE_NAME}) ${SUITE_NAME}; urgency=low" > debian/changelog
+            echo "nginx-amplify-agent (${VERSION}-${RELEASE}~${SUITE_NAME}) ${SUITE_NAME}; urgency=low" > debian/changelog
             echo "" >> debian/changelog
             echo "  * GetPageSpeed Amplify Agent release" >> debian/changelog
             echo "" >> debian/changelog
